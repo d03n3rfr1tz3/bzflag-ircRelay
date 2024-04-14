@@ -64,7 +64,7 @@ void ircRelay::Configure() {
     int r_len;
 
     std::string str1 = "NICK " + ircNick + "\r\n";
-    std::string str2 = "USER foo google.com google.com " + ircNick + "\r\n";
+    std::string str2 = "USER ircRelay 0 * :" + ircNick + "\r\n";
     std::string str3 = "JOIN #" + ircChannel + "\r\n";
 
     // recieve something before sending
@@ -292,6 +292,7 @@ void* respondPing(void* t) {
             std::string total = username + ": " + message;
 
             bz_sendTextMessage(BZ_SERVER, BZ_ALLUSERS, total.c_str());
+            bz_debugMessage(1, total.c_str());
         }
 
         if (data.substr(0, 4) == "PING") {
