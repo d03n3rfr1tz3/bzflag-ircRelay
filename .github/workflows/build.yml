@@ -1,0 +1,27 @@
+name: Compile Plugin
+
+# The workflow will run on every push and pull request to the repository
+on:
+  workflow_dispatch:
+  # (optional) Run workflow when pushing on master/main
+  push:
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron:  '0 0 1 * *'
+
+jobs:
+  compile-plugin:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout BZFlag
+      run: git clone -b 2.4 https://github.com/BZFlag-Dev/bzflag.git bzflag
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        path: ./bzflag/plugins/ircRelay
+    - name: Configure BZFlag Plugin
+      run: ./configure --enable-custom-plugins ircRelay
+    - name: Build BZFlag Plugin
+      run: ./autogen.sh; ./configure; make; make install
