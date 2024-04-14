@@ -2,13 +2,6 @@
 #include "bzfsAPI.h"
 #include "plugin_utils.h"
 
-int fd;
-bool world_up;
-bool plugin_up;
-std::string ircAddress;
-std::string ircChannel;
-std::string ircNick;
-
 class ircRelay : public bz_Plugin {
     public:
         virtual const char* Name();
@@ -17,5 +10,13 @@ class ircRelay : public bz_Plugin {
         virtual void Event(bz_EventData* eventData);
         static void Start();
         static void Stop();
-        static void* Ping(void* t);
+        static void Worker();
+    protected:
+        static std::string ircAddress;
+        static std::string ircChannel;
+        static std::string ircNick;
+    private:
+        volatile static int fd;
+        volatile static bool world_up;
+        volatile static bool plugin_up;
 };
