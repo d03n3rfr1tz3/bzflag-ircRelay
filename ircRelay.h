@@ -2,6 +2,9 @@
 #include "bzfsAPI.h"
 #include "plugin_utils.h"
 
+int fd;
+bool world_up;
+bool plugin_up;
 std::string ircAddress;
 std::string ircChannel;
 std::string ircNick;
@@ -15,8 +18,4 @@ class ircRelay : public bz_Plugin {
         static void Start();
         static void Stop();
         static void* Ping(void* t);
-    private:
-        static int fd;
-        static bool world_up;
-        static bool plugin_up;
 };

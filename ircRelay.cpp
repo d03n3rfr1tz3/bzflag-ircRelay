@@ -82,7 +82,7 @@ void ircRelay::Start() {
         bz_debugMessage(1, "Connection to irc server failed.");
     }
 
-    char recv_buf[1024];
+    char recv_buf[1025];
     int r_len;
 
     std::string str1 = "NICK " + ircNick + "\r\n";
