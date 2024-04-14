@@ -2,6 +2,10 @@
 #include "bzfsAPI.h"
 #include "plugin_utils.h"
 
+volatile int fd;
+volatile bool world_up;
+volatile bool plugin_up;
+
 class ircRelay : public bz_Plugin {
     public:
         virtual const char* Name();
@@ -11,8 +15,4 @@ class ircRelay : public bz_Plugin {
         static void Start();
         static void Stop();
         static void Worker();
-    private:
-        volatile static int fd;
-        volatile static bool world_up;
-        volatile static bool plugin_up;
 };
