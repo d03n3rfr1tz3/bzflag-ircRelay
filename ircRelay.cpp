@@ -15,6 +15,7 @@
 #include <windows.h>
 DWORD WINAPI respondPingThread(LPVOID lpParameter) { respondPing(lpParameter); };
 #else
+#include <netinet/in.h>
 #include <pthread.h>
 #include <sys/socket.h>
 #include <unistd.h>
