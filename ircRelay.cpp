@@ -32,6 +32,10 @@ void ircRelay::Init(const char* config) {
     Register(bz_eFilteredChatMessageEvent);
     Register(bz_ePlayerJoinEvent);
     Register(bz_ePlayerPartEvent);
+
+    bz_registerCustomBZDBString("_ircAddress", "0.0.0.0", 0, false);
+    bz_registerCustomBZDBString("_ircChannel", "bzflag", 0, false);
+    bz_registerCustomBZDBString("_ircNick", "bzrelay", 0, false);
 }
 
 void ircRelay::Configure() {
@@ -61,7 +65,7 @@ void ircRelay::Configure() {
 
     std::string str1 = "NICK " + ircNick + "\r\n";
     std::string str2 = "USER foo google.com google.com " + ircNick + "\r\n";
-    std::string str3 = "JOIN " + ircChannel + "\r\n";
+    std::string str3 = "JOIN #" + ircChannel + "\r\n";
 
     // recieve something before sending
     r_len = read(fd, recv_buf, 1024);
@@ -132,7 +136,7 @@ void ircRelay::Event(bz_EventData* eventData) {
 
                     if (message != "bzadminping") {// if message is not a bzadminping
                         std::string subtotal = colorcode + player + ":  " + "\017" + message;
-                        std::string total = "PRIVMSG " + ircChannel + " :" + subtotal + "\r\n";
+                        std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal + "\r\n";
                         write(fd, total.c_str(), strlen(total.c_str()));
                         bz_debugMessage(1, total.c_str());
                         break;
@@ -198,7 +202,7 @@ void ircRelay::Event(bz_EventData* eventData) {
                         subtotal = colorcode + callsign + "\017" + " joined as a " + player_team + " from " + ip;
                     }
 
-                    std::string total = "PRIVMSG " + ircChannel + " :" + subtotal + "\r\n";
+                    std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal + "\r\n";
                     write(fd, total.c_str(), strlen(total.c_str()));
                     bz_debugMessage(1, total.c_str());
                     break;
@@ -250,7 +254,7 @@ void ircRelay::Event(bz_EventData* eventData) {
 
                 if (callsign != "") {//send it only it is not a list server ping
                     std::string subtotal = colorcode + callsign + "\017" + " left the game";
-                    std::string total = "PRIVMSG " + ircChannel + " :" + subtotal + "\r\n";
+                    std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal + "\r\n";
                     write(fd, total.c_str(), strlen(total.c_str()));
                     bz_debugMessage(1, total.c_str());
                     break;
