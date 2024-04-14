@@ -22,6 +22,6 @@ jobs:
       with:
         path: ./bzflag/plugins/ircRelay
     - name: Prepare Packages
-      run: sudo apt-get install -y xlibmesa-gl-dev libsdl2-dev libc-ares-dev zlib1g-dev
+      run: sudo apt-get install -y libglu1-mesa-dev freeglut3-dev mesa-common-dev libsdl2-dev libc-ares-dev zlib1g-dev
     - name: Build BZFlag Plugin
       run: cd bzflag; ./autogen.sh; ./configure --enable-custom-plugins=ircRelay; make; make install
