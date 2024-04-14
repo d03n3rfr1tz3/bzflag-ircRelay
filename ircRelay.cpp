@@ -9,11 +9,12 @@
 
 #include <sys/types.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
 #include <io.h>
 #include <windows.h>
-DWORD WINAPI respondPingThread(LPVOID lpParameter) { respondPing(lpParameter); };
+DWORD WINAPI PingThread(LPVOID lpParameter) { ircRelay::Ping(lpParameter); };
 #else
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -40,13 +41,19 @@ void ircRelay::Init(const char* config) {
     bz_registerCustomBZDBString("_ircChannel", "", 0, false);
     bz_registerCustomBZDBString("_ircNick", "", 0, false);
 
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+    DWORD thread;
+    CreateThread(0, 0, PingThread, NULL, 0, &thread);
+#else
+    pthread_t thread;
+    pthread_create(&thread, NULL, ircRelay::Ping, NULL);
+#endif
+
     bz_debugMessage(1, "Initialized ircRelay custom plugin");
 }
 
-void ircRelay::Startup() {
+void ircRelay::Start() {
     bz_debugMessage(1, "Starting ircRelay custom plugin");
-    if (run) { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because its already running"); return; }
-    run = true;
 
     ircAddress = bz_getBZDBString("_ircAddress");
     ircChannel = bz_getBZDBString("_ircChannel");
@@ -54,6 +61,7 @@ void ircRelay::Startup() {
     if (ircAddress == "0.0.0.0") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because address is still 0.0.0.0"); return; }
     if (ircChannel == "") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because channel is still empty"); return; }
     if (ircNick == "") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because nick is still empty"); return; }
+    if (fd != 0) { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because its already running"); return; }
 
     fd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in dest_addr;
@@ -92,26 +100,26 @@ void ircRelay::Startup() {
     write(fd, str3.c_str(), str3.size());
     bz_debugMessage(2, str3.c_str());
 
-#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
-    DWORD thread;
-    CreateThread(0, 0, respondPingThread, NULL, 0, &thread);
-#else
-    pthread_t thread;
-    pthread_create(&thread, NULL, respondPing, NULL);
-#endif
-
     bz_debugMessage(1, "Started ircRelay custom plugin");
+}
+
+void ircRelay::Stop() {
+    bz_debugMessage(1, "Stopping ircRelay custom plugin");
+
+    close(fd);
+    fd = 0;
+
+    bz_debugMessage(1, "Stopped ircRelay custom plugin");
 }
 
 void ircRelay::Cleanup() {
     bz_debugMessage(1, "Cleaning ircRelay custom plugin");
 
+    Stop();
     Flush();
     bz_removeCustomBZDBVariable("_ircAddress");
     bz_removeCustomBZDBVariable("_ircChannel");
     bz_removeCustomBZDBVariable("_ircNick");
-    close(fd);
-    run = false;
 
     bz_debugMessage(1, "Cleaned ircRelay custom plugin");
 }
@@ -120,22 +128,7 @@ void ircRelay::Event(bz_EventData* eventData) {
     switch (eventData->eventType) {
         case bz_eWorldFinalized: {
             // This event is called when the world is done loading. This event contains no data and is only used for notification purposes.
-            Startup();
-        }
-        break;
-        case bz_eBZDBChange:
-        {
-            // This event is called each time a BZDB variable is changed
-            bz_BZDBChangeData_V1* data = (bz_BZDBChangeData_V1*)eventData;
-
-            // Data
-            // ----
-            // (bz_ApiString) key       - The variable that was changed
-            // (bz_ApiString) value     - What the variable was changed too
-            // (double)       eventTime - This value is the local server time of the event.
-            if (data->key == "_ircAddress" || data->key == "_ircChannel" || data->key == "_ircNick") {
-                Startup();
-            }
+            Start();
         }
         break;
         case bz_eFilteredChatMessageEvent: {
@@ -314,9 +307,19 @@ void ircRelay::Event(bz_EventData* eventData) {
     }
 }
 
-void* respondPing(void* t) {
-    while (1) {
-        char recv_buf[1024];
+void ircRelay::Ping(void* t) {
+    while (true) {
+        if (fd == 0) {
+            ircRelay::Start();
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+            Sleep(1000);
+#else
+            sleep(1000);
+#endif
+            continue;
+        }
+
+        char recv_buf[1025];
         int r_len = read(fd, recv_buf, 1024);
         recv_buf[r_len] = '\0';
 
