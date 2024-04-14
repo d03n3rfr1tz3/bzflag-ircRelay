@@ -37,22 +37,23 @@ void ircRelay::Init(const char* config) {
     Register(bz_ePlayerPartEvent);
 
     bz_registerCustomBZDBString("_ircAddress", "0.0.0.0", 0, false);
-    bz_registerCustomBZDBString("_ircChannel", "bzflag", 0, false);
-    bz_registerCustomBZDBString("_ircNick", "bzrelay", 0, false);
+    bz_registerCustomBZDBString("_ircChannel", "", 0, false);
+    bz_registerCustomBZDBString("_ircNick", "", 0, false);
 
     bz_debugMessage(1, "Initialized ircRelay custom plugin");
 }
 
 void ircRelay::Startup() {
     bz_debugMessage(1, "Starting ircRelay custom plugin");
+    if (run) { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because its already running"); return; }
+    run = true;
 
     ircAddress = bz_getBZDBString("_ircAddress");
     ircChannel = bz_getBZDBString("_ircChannel");
     ircNick = bz_getBZDBString("_ircNick");
-    if (ircAddress == "0.0.0.0") {
-        bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because address is still 0.0.0.0");
-        return;
-    }
+    if (ircAddress == "0.0.0.0") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because address is still 0.0.0.0"); return; }
+    if (ircChannel == "") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because channel is still empty"); return; }
+    if (ircNick == "") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because nick is still empty"); return; }
 
     fd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in dest_addr;
@@ -110,6 +111,7 @@ void ircRelay::Cleanup() {
     bz_removeCustomBZDBVariable("_ircChannel");
     bz_removeCustomBZDBVariable("_ircNick");
     close(fd);
+    run = false;
 
     bz_debugMessage(1, "Cleaned ircRelay custom plugin");
 }
@@ -119,6 +121,21 @@ void ircRelay::Event(bz_EventData* eventData) {
         case bz_eWorldFinalized: {
             // This event is called when the world is done loading. This event contains no data and is only used for notification purposes.
             Startup();
+        }
+        break;
+        case bz_eBZDBChange:
+        {
+            // This event is called each time a BZDB variable is changed
+            bz_BZDBChangeData_V1* data = (bz_BZDBChangeData_V1*)eventData;
+
+            // Data
+            // ----
+            // (bz_ApiString) key       - The variable that was changed
+            // (bz_ApiString) value     - What the variable was changed too
+            // (double)       eventTime - This value is the local server time of the event.
+            if (data->key == "_ircAddress" || data->key == "_ircChannel" || data->key == "_ircNick") {
+                Startup();
+            }
         }
         break;
         case bz_eFilteredChatMessageEvent: {

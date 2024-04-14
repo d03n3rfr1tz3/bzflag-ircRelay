@@ -7,6 +7,7 @@ std::string ircChannel;
 std::string ircNick;
 
 int fd;
+bool run;
 void* respondPing(void*);
 
 class ircRelay : public bz_Plugin {
