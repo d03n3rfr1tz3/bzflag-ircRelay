@@ -14,7 +14,7 @@ class ircRelay : public bz_Plugin {
         virtual void Event(bz_EventData* eventData);
         static void Start();
         static void Stop();
-        static void Ping(void* t);
+        static void* Ping(void* t);
     private:
         static int fd;
 };

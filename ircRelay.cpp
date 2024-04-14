@@ -307,7 +307,7 @@ void ircRelay::Event(bz_EventData* eventData) {
     }
 }
 
-void ircRelay::Ping(void* t) {
+void* ircRelay::Ping(void* t) {
     while (true) {
         if (fd == 0) {
             ircRelay::Start();
