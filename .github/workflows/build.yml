@@ -22,4 +22,4 @@ jobs:
       with:
         path: ./bzflag/plugins/ircRelay
     - name: Build BZFlag Plugin
-      run: cd bzflag; ./autogen.sh; ./configure --enable-custom-plugins ircRelay; make; make install
+      run: cd bzflag; ./autogen.sh; ./configure --enable-custom-plugins=ircRelay; make; make install
