@@ -1,5 +1,6 @@
-# Plugin Name
+# IRC Relay
 
+[![Compile Plugin](https://github.com/d03n3rfr1tz3/bzflag-irc/actions/workflows/build.yml/badge.svg)](https://github.com/d03n3rfr1tz3/bzflag-irc/actions/workflows/build.yml)
 [![GitHub release](https://img.shields.io/github/release/d03n3rfr1tz3/bzflag-irc.svg)](https://github.com/d03n3rfr1tz3/bzflag-irc/releases/latest)
 ![Minimum BZFlag Version](https://img.shields.io/badge/BZFlag-v2.4.0+-blue.svg)
 [![License](https://img.shields.io/github/license/d03n3rfr1tz3/bzflag-irc.svg)](LICENSE.md)
