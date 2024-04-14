@@ -57,6 +57,9 @@ void ircRelay::Init(const char* config) {
 void ircRelay::Start() {
     bz_debugMessage(1, "Starting ircRelay custom plugin");
 
+    std::string ircAddress;
+    std::string ircChannel;
+    std::string ircNick;
     if (bz_BZDBItemExists("_ircAddress")) ircAddress = bz_getBZDBString("_ircAddress"); else return;
     if (bz_BZDBItemExists("_ircChannel")) ircChannel = bz_getBZDBString("_ircChannel"); else return;
     if (bz_BZDBItemExists("_ircNick")) ircNick = bz_getBZDBString("_ircNick"); else return;
@@ -163,6 +166,9 @@ void ircRelay::Event(bz_EventData* eventData) {
             // (bz_eMessageType) messageType - The type of message being sent.
             // (double)          eventTime   - The time of the event.
 
+            std::string ircChannel = bz_BZDBItemExists("_ircChannel") ? bz_getBZDBString("_ircChannel") : "";
+            if (ircChannel == "") break;
+
             bz_BasePlayerRecord* speaker = bz_getPlayerByIndex(data->from);
             if (speaker != NULL) {
                 std::string message = data->message.c_str(); //um... yeah
@@ -219,6 +225,9 @@ void ircRelay::Event(bz_EventData* eventData) {
             // (int)                  playerID  - The player ID that is joining
             // (bz_BasePlayerRecord*) record    - The player record for the joining player
             // (double)               eventTime - Time of event.
+
+            std::string ircChannel = bz_BZDBItemExists("_ircChannel") ? bz_getBZDBString("_ircChannel") : "";
+            if (ircChannel == "") break;
 
             bz_BasePlayerRecord* joiner = data->record;
             if (joiner != NULL) {
@@ -291,6 +300,9 @@ void ircRelay::Event(bz_EventData* eventData) {
             // (bz_BasePlayerRecord*) record    - The player record for the leaving player
             // (bz_ApiString)         reason    - The reason for leaving, such as a kick or a ban
             // (double)               eventTime - Time of event.
+
+            std::string ircChannel = bz_BZDBItemExists("_ircChannel") ? bz_getBZDBString("_ircChannel") : "";
+            if (ircChannel == "") break;
 
             bz_BasePlayerRecord* leaver = data->record;
             if (leaver != NULL) {

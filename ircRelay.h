@@ -11,10 +11,6 @@ class ircRelay : public bz_Plugin {
         static void Start();
         static void Stop();
         static void Worker();
-    protected:
-        static std::string ircAddress;
-        static std::string ircChannel;
-        static std::string ircNick;
     private:
         volatile static int fd;
         volatile static bool world_up;
