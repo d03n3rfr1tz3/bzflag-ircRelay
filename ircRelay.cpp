@@ -82,15 +82,18 @@ void ircRelay::Start() {
         bz_debugMessage(1, "Connection to irc server failed.");
     }
 
-    char recv_buf[1025];
-    int r_len;
-
     std::string str1 = "NICK " + ircNick + "\r\n";
     std::string str2 = "USER ircRelay 0 * :" + ircNick + "\r\n";
     std::string str3 = "JOIN #" + ircChannel + "\r\n";
 
     // recieve something before sending
-    r_len = read(fd, recv_buf, 1024);
+    char recv_buf[1025];
+    int r_len = read(fd, recv_buf, 1024);
+    if (r_len == -1) {
+        bz_debugMessage(1, "Connection lost to irc server.");
+        Stop();
+    }
+
     recv_buf[r_len] = '\0';
     std::string message = recv_buf;
 
@@ -342,19 +345,23 @@ void ircRelay::Event(bz_EventData* eventData) {
 void ircRelay::Worker() {
     while (plugin_up) {
         if (fd == 0) {
-            if (world_up) ircRelay::Start();
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
             Sleep(1000);
 #else
             sleep(1000);
 #endif
+            if (world_up) ircRelay::Start();
             continue;
         }
 
         char recv_buf[1025];
         int r_len = read(fd, recv_buf, 1024);
-        recv_buf[r_len] = '\0';
+        if (r_len == -1) {
+            bz_debugMessage(1, "Connection lost to irc server.");
+            Stop();
+        }
 
+        recv_buf[r_len] = '\0';
         std::string data = recv_buf;
 
         if (data.find("PRIVMSG", 0) != std::string::npos) { // send only privmsgs
