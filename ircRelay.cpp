@@ -31,6 +31,7 @@ const char* ircRelay::Name() {
 
 void ircRelay::Init(const char* config) {
     bz_debugMessage(1, "Initializing ircRelay custom plugin");
+    run = true;
 
     Register(bz_eWorldFinalized);
     Register(bz_eFilteredChatMessageEvent);
@@ -55,9 +56,9 @@ void ircRelay::Init(const char* config) {
 void ircRelay::Start() {
     bz_debugMessage(1, "Starting ircRelay custom plugin");
 
-    ircAddress = bz_getBZDBString("_ircAddress");
-    ircChannel = bz_getBZDBString("_ircChannel");
-    ircNick = bz_getBZDBString("_ircNick");
+    if (bz_BZDBItemExists("_ircAddress")) ircAddress = bz_getBZDBString("_ircAddress"); else return;
+    if (bz_BZDBItemExists("_ircChannel")) ircChannel = bz_getBZDBString("_ircChannel"); else return;
+    if (bz_BZDBItemExists("_ircNick")) ircNick = bz_getBZDBString("_ircNick"); else return;
     if (ircAddress == "0.0.0.0") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because address is still 0.0.0.0"); return; }
     if (ircChannel == "") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because channel is still empty"); return; }
     if (ircNick == "") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because nick is still empty"); return; }
@@ -114,6 +115,7 @@ void ircRelay::Stop() {
 
 void ircRelay::Cleanup() {
     bz_debugMessage(1, "Cleaning ircRelay custom plugin");
+    run = false;
 
     Stop();
     Flush();
@@ -308,7 +310,7 @@ void ircRelay::Event(bz_EventData* eventData) {
 }
 
 void* ircRelay::Ping(void* t) {
-    while (true) {
+    while (run) {
         if (fd == 0) {
             ircRelay::Start();
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)

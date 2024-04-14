@@ -17,4 +17,5 @@ class ircRelay : public bz_Plugin {
         static void* Ping(void* t);
     private:
         static int fd;
+        static bool run;
 };
