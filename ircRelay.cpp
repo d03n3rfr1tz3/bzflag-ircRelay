@@ -88,6 +88,10 @@ void ircRelay::Configure() {
 
 void ircRelay::Cleanup() {
     Flush();
+    bz_removeCustomBZDBVariable("_ircAddress");
+    bz_removeCustomBZDBVariable("_ircChannel");
+    bz_removeCustomBZDBVariable("_ircNick");
+    close(fd);
 }
 
 void ircRelay::Event(bz_EventData* eventData) {
