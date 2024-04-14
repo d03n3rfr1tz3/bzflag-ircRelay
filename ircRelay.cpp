@@ -29,8 +29,9 @@ const char* ircRelay::Name() {
 }
 
 void ircRelay::Init(const char* config) {
-    bz_debugMessage(2, "Initializing ircRelay custom plugin");
+    bz_debugMessage(1, "Initializing ircRelay custom plugin");
 
+    Register(bz_eWorldFinalized);
     Register(bz_eFilteredChatMessageEvent);
     Register(bz_ePlayerJoinEvent);
     Register(bz_ePlayerPartEvent);
@@ -39,17 +40,23 @@ void ircRelay::Init(const char* config) {
     bz_registerCustomBZDBString("_ircChannel", "bzflag", 0, false);
     bz_registerCustomBZDBString("_ircNick", "bzrelay", 0, false);
 
-    Configure();
+    bz_debugMessage(1, "Initialized ircRelay custom plugin");
 }
 
-void ircRelay::Configure() {
-    fd = socket(AF_INET, SOCK_STREAM, 0);
-    struct sockaddr_in dest_addr;
-    dest_addr.sin_family = AF_INET;
+void ircRelay::Startup() {
+    bz_debugMessage(1, "Starting ircRelay custom plugin");
 
     ircAddress = bz_getBZDBString("_ircAddress");
     ircChannel = bz_getBZDBString("_ircChannel");
     ircNick = bz_getBZDBString("_ircNick");
+    if (ircAddress == "0.0.0.0") {
+        bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because address is still 0.0.0.0");
+        return;
+    }
+
+    fd = socket(AF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in dest_addr;
+    dest_addr.sin_family = AF_INET;
 
     dest_addr.sin_addr.s_addr = inet_addr(ircAddress.c_str());//address of irc server
     dest_addr.sin_port = htons(6667);//port of irc server
@@ -92,7 +99,7 @@ void ircRelay::Configure() {
     pthread_create(&thread, NULL, respondPing, NULL);
 #endif
 
-    bz_debugMessage(1, "Initialized ircRelay custom plugin");
+    bz_debugMessage(1, "Started ircRelay custom plugin");
 }
 
 void ircRelay::Cleanup() {
@@ -109,6 +116,11 @@ void ircRelay::Cleanup() {
 
 void ircRelay::Event(bz_EventData* eventData) {
     switch (eventData->eventType) {
+        case bz_eWorldFinalized: {
+            // This event is called when the world is done loading. This event contains no data and is only used for notification purposes.
+            Startup();
+        }
+        break;
         case bz_eFilteredChatMessageEvent: {
             // This event is called for each chat message the server receives; after the server or any plug-ins have done filtering
             bz_ChatEventData_V2* data = (bz_ChatEventData_V2*)eventData;
