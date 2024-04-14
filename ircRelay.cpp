@@ -21,6 +21,7 @@ DWORD WINAPI PingThread(LPVOID lpParameter) { ircRelay::Ping(lpParameter); };
 #include <pthread.h>
 #include <sys/socket.h>
 #include <unistd.h>
+void* PingThread(void* t) { ircRelay::Ping(t); }
 #endif
 
 BZ_PLUGIN(ircRelay)
@@ -31,7 +32,7 @@ const char* ircRelay::Name() {
 
 void ircRelay::Init(const char* config) {
     bz_debugMessage(1, "Initializing ircRelay custom plugin");
-    run = true;
+    plugin_up = true;
 
     Register(bz_eWorldFinalized);
     Register(bz_eFilteredChatMessageEvent);
@@ -47,7 +48,7 @@ void ircRelay::Init(const char* config) {
     CreateThread(0, 0, PingThread, NULL, 0, &thread);
 #else
     pthread_t thread;
-    pthread_create(&thread, NULL, ircRelay::Ping, NULL);
+    pthread_create(&thread, NULL, PingThread, NULL);
 #endif
 
     bz_debugMessage(1, "Initialized ircRelay custom plugin");
@@ -115,7 +116,7 @@ void ircRelay::Stop() {
 
 void ircRelay::Cleanup() {
     bz_debugMessage(1, "Cleaning ircRelay custom plugin");
-    run = false;
+    plugin_up = false;
 
     Stop();
     Flush();
@@ -130,7 +131,7 @@ void ircRelay::Event(bz_EventData* eventData) {
     switch (eventData->eventType) {
         case bz_eWorldFinalized: {
             // This event is called when the world is done loading. This event contains no data and is only used for notification purposes.
-            Start();
+            world_up = true;
         }
         break;
         case bz_eFilteredChatMessageEvent: {
@@ -310,9 +311,9 @@ void ircRelay::Event(bz_EventData* eventData) {
 }
 
 void* ircRelay::Ping(void* t) {
-    while (run) {
+    while (plugin_up) {
         if (fd == 0) {
-            ircRelay::Start();
+            if (world_up) ircRelay::Start();
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
             Sleep(1000);
 #else
