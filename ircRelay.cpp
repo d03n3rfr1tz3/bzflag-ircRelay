@@ -29,6 +29,8 @@ const char* ircRelay::Name() {
 }
 
 void ircRelay::Init(const char* config) {
+    bz_debugMessage(2, "Initializing ircRelay custom plugin");
+
     Register(bz_eFilteredChatMessageEvent);
     Register(bz_ePlayerJoinEvent);
     Register(bz_ePlayerPartEvent);
@@ -36,6 +38,8 @@ void ircRelay::Init(const char* config) {
     bz_registerCustomBZDBString("_ircAddress", "0.0.0.0", 0, false);
     bz_registerCustomBZDBString("_ircChannel", "bzflag", 0, false);
     bz_registerCustomBZDBString("_ircNick", "bzrelay", 0, false);
+
+    Configure();
 }
 
 void ircRelay::Configure() {
@@ -54,10 +58,10 @@ void ircRelay::Configure() {
 
 
     if (connect(fd, (struct sockaddr*)&dest_addr, sizeof(struct sockaddr)) != 0) {
-        bz_debugMessage(1, "Connecting to irc server");
+        bz_debugMessage(1, "Connecting to irc server.");
     }
     else {
-        bz_debugMessage(1, "ERROR! Could not connect!");
+        bz_debugMessage(1, "Connection to irc server failed.");
     }
 
     char recv_buf[1024];
@@ -74,8 +78,11 @@ void ircRelay::Configure() {
 
     // send username, join channel
     write(fd, str1.c_str(), str1.size());
+    bz_debugMessage(2, str1.c_str());
     write(fd, str2.c_str(), str2.size());
+    bz_debugMessage(2, str2.c_str());
     write(fd, str3.c_str(), str3.size());
+    bz_debugMessage(2, str3.c_str());
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
     DWORD thread;
@@ -84,14 +91,20 @@ void ircRelay::Configure() {
     pthread_t thread;
     pthread_create(&thread, NULL, respondPing, NULL);
 #endif
+
+    bz_debugMessage(1, "Initialized ircRelay custom plugin");
 }
 
 void ircRelay::Cleanup() {
+    bz_debugMessage(1, "Cleaning ircRelay custom plugin");
+
     Flush();
     bz_removeCustomBZDBVariable("_ircAddress");
     bz_removeCustomBZDBVariable("_ircChannel");
     bz_removeCustomBZDBVariable("_ircNick");
     close(fd);
+
+    bz_debugMessage(1, "Cleaned ircRelay custom plugin");
 }
 
 void ircRelay::Event(bz_EventData* eventData) {
@@ -142,7 +155,7 @@ void ircRelay::Event(bz_EventData* eventData) {
                         std::string subtotal = colorcode + player + ":  " + "\017" + message;
                         std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal + "\r\n";
                         write(fd, total.c_str(), strlen(total.c_str()));
-                        bz_debugMessage(1, total.c_str());
+                        bz_debugMessage(2, total.c_str());
                         break;
                     }
                 }
@@ -208,7 +221,7 @@ void ircRelay::Event(bz_EventData* eventData) {
 
                     std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal + "\r\n";
                     write(fd, total.c_str(), strlen(total.c_str()));
-                    bz_debugMessage(1, total.c_str());
+                    bz_debugMessage(2, total.c_str());
                     break;
                 }
             }
@@ -260,7 +273,7 @@ void ircRelay::Event(bz_EventData* eventData) {
                     std::string subtotal = colorcode + callsign + "\017" + " left the game";
                     std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal + "\r\n";
                     write(fd, total.c_str(), strlen(total.c_str()));
-                    bz_debugMessage(1, total.c_str());
+                    bz_debugMessage(2, total.c_str());
                     break;
                 }
             }
@@ -292,7 +305,7 @@ void* respondPing(void* t) {
             std::string total = username + ": " + message;
 
             bz_sendTextMessage(BZ_SERVER, BZ_ALLUSERS, total.c_str());
-            bz_debugMessage(1, total.c_str());
+            bz_debugMessage(2, total.c_str());
         }
 
         if (data.substr(0, 4) == "PING") {
