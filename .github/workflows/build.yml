@@ -22,11 +22,11 @@ jobs:
       with:
         path: ./bzflag/plugins/ircRelay
     - name: Prepare Packages
-      run: sudo apt-get install -y build-essential libglu1-mesa-dev freeglut3-dev mesa-common-dev libsdl2-dev libc-ares-dev libcurl4-gnutls-dev zlib1g-dev
+      run: sudo apt-get update; sudo apt-get install -y build-essential libglu1-mesa-dev freeglut3-dev mesa-common-dev libsdl2-dev libc-ares-dev libcurl4-gnutls-dev zlib1g-dev; sudo apt-get clean
     - name: Build BZFlag Plugin
-      run: cd bzflag; ./autogen.sh; ./configure --disable-client --disable-bzadmin --enable-custom-plugins=ircRelay; make
-    - name: Archive code coverage results
+      run: cd bzflag; ./autogen.sh; ./configure --disable-client --disable-bzadmin --enable-custom-plugins=ircRelay; make; make install
+    - name: Archive BZFS Plugins
       uses: actions/upload-artifact@v4
       with:
-        name: ircRelay
-        path: bzflag/src/bzfs
+        name: Plugins
+        path: /usr/local/lib/bzflag
