@@ -21,7 +21,5 @@ jobs:
       uses: actions/checkout@v4
       with:
         path: ./bzflag/plugins/ircRelay
-    - name: Configure BZFlag Plugin
-      run: ./configure --enable-custom-plugins ircRelay
     - name: Build BZFlag Plugin
-      run: ./autogen.sh; ./configure; make; make install
+      run: cd bzflag; ./autogen.sh; ./configure --enable-custom-plugins ircRelay; make; make install
