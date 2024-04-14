@@ -71,7 +71,7 @@ void ircRelay::Configure() {
     write(fd, str2.c_str(), str2.size());
     write(fd, str3.c_str(), str3.size());
 
-#ifdef WIN32 || _WIN32 || WIN64 || _WIN64
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
     DWORD thread;
     CreateThread(0, 0, respondPingThread, NULL, 0, &thread);
 #else

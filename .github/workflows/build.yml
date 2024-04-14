@@ -24,4 +24,4 @@ jobs:
     - name: Prepare Packages
       run: sudo apt-get install -y build-essential libglu1-mesa-dev freeglut3-dev mesa-common-dev libsdl2-dev libc-ares-dev libcurl4-gnutls-dev zlib1g-dev
     - name: Build BZFlag Plugin
-      run: cd bzflag; ./autogen.sh; ./configure --enable-custom-plugins=ircRelay; make
+      run: cd bzflag; ./autogen.sh; ./configure --disable-client --disable-bzadmin --enable-custom-plugins=ircRelay; make
