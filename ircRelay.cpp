@@ -10,7 +10,7 @@
 #include <sys/types.h>
 #include <stdio.h>
 
-#ifdef WIN32 || _WIN32 || WIN64 || _WIN64
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
 #include <io.h>
 #include <windows.h>
 DWORD WINAPI respondPingThread(LPVOID lpParameter) { respondPing(lpParameter); };
