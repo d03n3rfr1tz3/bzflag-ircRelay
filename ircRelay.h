@@ -21,7 +21,7 @@ class ircRelay : public bz_Plugin {
         static void Start();
         static void Stop();
 
-        static void Receive();
+        static void Receive(std::string until);
         static void Send(std::string data, int debugLevel);
 
         static void Worker();
