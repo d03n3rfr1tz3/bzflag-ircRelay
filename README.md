@@ -5,9 +5,9 @@
 ![Minimum BZFlag Version](https://img.shields.io/badge/BZFlag-v2.4.0+-blue.svg)
 [![License](https://img.shields.io/github/license/d03n3rfr1tz3/bzflag-irc.svg)](LICENSE.md)
 
-This plugin is a revival of the IRC Relay plugin from `wegstar` of the BZFlag forums.
+This plugin is a revival of the IRC Relay plugin from the BZFlag forum user `wegstar`.
 It should work with version 2.4.x and also replaces the usage of a separate config.txt
-with the use of BZDB variables.
+with the use of BZDB variables and has some minor additional features.
 
 ## Requirements
 
@@ -22,10 +22,6 @@ You should specify any command line arguments that are needed or lack thereof
 ```
 -loadplugin ircRelay
 ```
-
-### Configuration File
-
-If the plugin requires a custom configuration file, describe it here and all of its special values
 
 ### Custom BZDB Variables
 

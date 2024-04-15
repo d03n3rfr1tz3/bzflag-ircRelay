@@ -35,11 +35,13 @@ const char* ircRelay::Name() {
 void ircRelay::Init(const char* config) {
     bz_debugMessage(2, "Initializing ircRelay custom plugin");
 
-    Register(bz_eWorldFinalized);
+    // register events
+    Register(bz_eBZDBChange);
     Register(bz_eFilteredChatMessageEvent);
     Register(bz_ePlayerJoinEvent);
     Register(bz_ePlayerPartEvent);
 
+    // register config
     bz_registerCustomBZDBString("_ircAddress", "", 0, false);
     bz_registerCustomBZDBString("_ircChannel", "", 0, false);
     bz_registerCustomBZDBString("_ircNick", "", 0, false);
@@ -58,6 +60,7 @@ void ircRelay::Init(const char* config) {
 void ircRelay::Start() {
     bz_debugMessage(2, "Starting ircRelay custom plugin");
 
+    // get config
     std::string ircAddress;
     std::string ircChannel;
     std::string ircNick;
@@ -69,6 +72,7 @@ void ircRelay::Start() {
     if (ircNick == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because nick is still empty"); return; }
     if (fd != 0) { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because its already running"); return; }
 
+    // prepare socket
     fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd == 0) {
         std::string debugMessage = "Connection to irc server " + ircAddress + " failed, because creating the socket failed";
@@ -76,6 +80,7 @@ void ircRelay::Start() {
         return;
     }
 
+    // prepare connection
     struct sockaddr_in dest_addr;
     memset(&dest_addr, 0, sizeof(dest_addr));
     dest_addr.sin_family = AF_INET;
@@ -98,6 +103,7 @@ void ircRelay::Start() {
     }
     memset(&(dest_addr.sin_zero), '\0', 8);
 
+    // connect to server
     std::string debugMessage = "Connecting to irc server " + ircAddress;
     if (connect(fd, (struct sockaddr*)&dest_addr, sizeof(struct sockaddr)) < 0) {
         std::string debugMessage = "Connection to irc server " + ircAddress + " failed";
@@ -106,39 +112,20 @@ void ircRelay::Start() {
         return;
     }
 
-    std::string str1 = "NICK " + ircNick + "\r\n";
-    std::string str2 = "USER ircRelay 0 * :" + ircNick + "\r\n";
-    std::string str3 = "JOIN #" + ircChannel + "\r\n";
+    // receive something before sending
+    Receive();
 
-    // recieve something before sending
-    char recv_buf[1025];
-    int r_len = read(fd, recv_buf, 1024);
-    if (r_len == -1) {
-        bz_debugMessage(1, "Connection lost to irc server");
-        Stop();
-    }
+    // send nick
+    Send("NICK " + ircNick, 3);
 
-    recv_buf[r_len] = '\0';
-    std::string message = recv_buf;
+    // send user
+    Send("USER ircRelay 0 * :BZFlag ircRelay", 3);
 
-    // send username, join channel
-    bz_debugMessage(2, str1.c_str());
-    if (write(fd, str1.c_str(), str1.size()) == -1) {
-        bz_debugMessage(1, "Connection lost to irc server");
-        Stop();
-    }
+    // receive reply
+    Receive();
 
-    bz_debugMessage(2, str2.c_str());
-    if (write(fd, str2.c_str(), str2.size()) == -1) {
-        bz_debugMessage(1, "Connection lost to irc server");
-        Stop();
-    }
-
-    bz_debugMessage(2, str3.c_str());
-    if (write(fd, str3.c_str(), str3.size()) == -1) {
-        bz_debugMessage(1, "Connection lost to irc server");
-        Stop();
-    }
+    // send join
+    Send("JOIN #" + ircChannel, 3);
 
     bz_debugMessage(2, "Started ircRelay custom plugin");
 }
@@ -146,6 +133,7 @@ void ircRelay::Start() {
 void ircRelay::Stop() {
     bz_debugMessage(2, "Stopping ircRelay custom plugin");
 
+    // close socket
     close(fd);
     fd = 0;
 
@@ -155,9 +143,12 @@ void ircRelay::Stop() {
 void ircRelay::Cleanup() {
     bz_debugMessage(2, "Cleaning ircRelay custom plugin");
 
+    // clean up stuff
     fc = true;
     Stop();
     Flush();
+
+    // deregister config
     bz_removeCustomBZDBVariable("_ircAddress");
     bz_removeCustomBZDBVariable("_ircChannel");
     bz_removeCustomBZDBVariable("_ircNick");
@@ -167,6 +158,29 @@ void ircRelay::Cleanup() {
 
 void ircRelay::Event(bz_EventData* eventData) {
     switch (eventData->eventType) {
+        case bz_eBZDBChange:
+        {
+            // This event is called each time a BZDB variable is changed
+            bz_BZDBChangeData_V1* data = (bz_BZDBChangeData_V1*)eventData;
+            if (fd == 0) break;
+
+            // Data
+            // ----
+            // (bz_ApiString) key       - The variable that was changed
+            // (bz_ApiString) value     - What the variable was changed too
+            // (double)       eventTime - This value is the local server time of the event.
+
+            // restart on changing address or channel
+            if (data->key == "_ircAddress" || data->key == "_ircChannel") {
+                Stop();
+            }
+
+            // rename on changing nick
+            if (data->key == "_ircNick") {
+                Send("NICK " + (std::string)data->value, 3);
+            }
+        }
+        break;
         case bz_eFilteredChatMessageEvent: {
             // This event is called for each chat message the server receives; after the server or any plug-ins have done filtering
             bz_ChatEventData_V2* data = (bz_ChatEventData_V2*)eventData;
@@ -215,13 +229,9 @@ void ircRelay::Event(bz_EventData* eventData) {
 
                     if (message != "bzadminping") {// if message is not a bzadminping
                         std::string subtotal = colorcode + player + ":  " + "\017" + message;
-                        std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal + "\r\n";
+                        std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal;
 
-                        bz_debugMessage(3, total.c_str());
-                        if (write(fd, total.c_str(), strlen(total.c_str())) == -1) {
-                            bz_debugMessage(1, "Connection lost to irc server");
-                            Stop();
-                        }
+                        Send(total, 3);
                         break;
                     }
                 }
@@ -289,13 +299,9 @@ void ircRelay::Event(bz_EventData* eventData) {
                         subtotal = colorcode + callsign + "\017" + " joined as a " + player_team + " from " + ip;
                     }
 
-                    std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal + "\r\n";
+                    std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal;
 
-                    bz_debugMessage(3, total.c_str());
-                    if (write(fd, total.c_str(), strlen(total.c_str())) == -1) {
-                        bz_debugMessage(1, "Connection lost to irc server");
-                        Stop();
-                    }
+                    Send(total, 3);
                     break;
                 }
             }
@@ -349,13 +355,9 @@ void ircRelay::Event(bz_EventData* eventData) {
 
                 if (callsign != "") {//send it only it is not a list server ping
                     std::string subtotal = colorcode + callsign + "\017" + " left the game";
-                    std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal + "\r\n";
+                    std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal;
 
-                    bz_debugMessage(3, total.c_str());
-                    if (write(fd, total.c_str(), strlen(total.c_str())) == -1) {
-                        bz_debugMessage(1, "Connection lost to irc server");
-                        Stop();
-                    }
+                    Send(total, 3);
                     break;
                 }
             }
@@ -367,10 +369,59 @@ void ircRelay::Event(bz_EventData* eventData) {
     }
 }
 
+void ircRelay::Receive() {
+    char recv_buf[1025];
+    int r_len = read(fd, recv_buf, 1024);
+    if (r_len == -1) {
+        bz_debugMessage(1, "Connection lost to irc server");
+        Stop();
+    }
+
+    recv_buf[r_len] = '\0';
+    std::string data = recv_buf;
+    bz_debugMessage(4, data.c_str());
+
+    // passing messages from the channel to BZFlag
+    if (data.find("PRIVMSG", 0) != std::string::npos) {
+        std::string::size_type pos = data.find(":", 0);
+        std::string::size_type endpos = data.find("!", 0);
+        std::string username = data.substr(pos + 1, endpos - 1);
+
+        pos = data.find(":", 1);
+        endpos = data.size();
+        std::string message = data.substr(pos + 1, endpos);
+
+        std::string total = username + ": " + message;
+
+        bz_sendTextMessage(BZ_SERVER, BZ_ALLUSERS, total.c_str());
+    }
+
+    // respond to pings
+    if (data.substr(0, 4) == "PING") {
+        std::string ping = data;
+        std::string pongdata = ping.substr(5, ping.size());
+
+        std::string pong = "PONG " + pongdata;
+
+        Send(pong, 4);
+    }
+}
+
+void ircRelay::Send(std::string data, int debugLevel) {
+    bz_debugMessage(debugLevel, data.c_str());
+
+    std::string line = data + "\r\n";
+    if (write(fd, line.c_str(), line.size()) == -1) {
+        bz_debugMessage(1, "Connection lost to irc server");
+        Stop();
+    }
+}
+
 void ircRelay::Worker() {
     bz_debugMessage(2, "Worker for irc server connection started");
 
     while (!fc) {
+        // start if not already done
         if (fd == 0) {
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
             Sleep(5 * 1000);
@@ -382,42 +433,8 @@ void ircRelay::Worker() {
             continue;
         }
 
-        char recv_buf[1025];
-        int r_len = read(fd, recv_buf, 1024);
-        if (r_len == -1) {
-            bz_debugMessage(1, "Connection lost to irc server");
-            Stop();
-        }
-
-        recv_buf[r_len] = '\0';
-        std::string data = recv_buf;
-
-        if (data.find("PRIVMSG", 0) != std::string::npos) { // send only privmsgs
-            std::string::size_type pos = data.find(":", 0);
-            std::string::size_type endpos = data.find("!", 0);
-            std::string username = data.substr(pos + 1, endpos - 1);
-
-            pos = data.find(":", 1); // find the other :
-            endpos = data.size();
-            std::string message = data.substr(pos + 1, endpos);
-
-            std::string total = username + ": " + message;
-
-            bz_sendTextMessage(BZ_SERVER, BZ_ALLUSERS, total.c_str());
-        }
-
-        if (data.substr(0, 4) == "PING") {
-            std::string ping = data;
-            std::string pongdata = ping.substr(5, ping.size());
-
-            std::string pong = "PONG " + pongdata + "\n";
-
-            bz_debugMessage(4, pong.c_str());
-            if (write(fd, pong.c_str(), pong.size()) == -1) {
-                bz_debugMessage(1, "Connection lost to irc server");
-                Stop();
-            }
-        }
+        // receive messages
+        Receive();
     }
 
     bz_debugMessage(2, "Worker for irc server connection stopped");

@@ -17,7 +17,12 @@ class ircRelay : public bz_Plugin {
         virtual void Init(const char* config);
         virtual void Cleanup();
         virtual void Event(bz_EventData* eventData);
+
         static void Start();
         static void Stop();
+
+        static void Receive();
+        static void Send(std::string data, int debugLevel);
+
         static void Worker();
 };
