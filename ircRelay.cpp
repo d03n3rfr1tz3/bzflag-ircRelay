@@ -31,7 +31,7 @@ const char* ircRelay::Name() {
 }
 
 void ircRelay::Init(const char* config) {
-    bz_debugMessage(1, "Initializing ircRelay custom plugin");
+    bz_debugMessage(2, "Initializing ircRelay custom plugin");
 
     Register(bz_eWorldFinalized);
     Register(bz_eFilteredChatMessageEvent);
@@ -50,11 +50,11 @@ void ircRelay::Init(const char* config) {
     pthread_create(&thread, NULL, WorkerThread, NULL);
 #endif
 
-    bz_debugMessage(1, "Initialized ircRelay custom plugin");
+    bz_debugMessage(2, "Initialized ircRelay custom plugin");
 }
 
 void ircRelay::Start() {
-    bz_debugMessage(1, "Starting ircRelay custom plugin");
+    bz_debugMessage(2, "Starting ircRelay custom plugin");
 
     std::string ircAddress;
     std::string ircChannel;
@@ -62,10 +62,10 @@ void ircRelay::Start() {
     if (bz_BZDBItemExists("_ircAddress")) ircAddress = bz_getBZDBString("_ircAddress"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircAddress does not exist"); return; }
     if (bz_BZDBItemExists("_ircChannel")) ircChannel = bz_getBZDBString("_ircChannel"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircChannel does not exist"); return; }
     if (bz_BZDBItemExists("_ircNick")) ircNick = bz_getBZDBString("_ircNick"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircNick does not exist"); return; }
-    if (ircAddress == "0.0.0.0") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because address is still 0.0.0.0"); return; }
-    if (ircChannel == "") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because channel is still empty"); return; }
-    if (ircNick == "") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because nick is still empty"); return; }
-    if (fd != 0) { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because its already running"); return; }
+    if (ircAddress == "0.0.0.0") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because address is still 0.0.0.0"); return; }
+    if (ircChannel == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because channel is still empty"); return; }
+    if (ircNick == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because nick is still empty"); return; }
+    if (fd != 0) { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because its already running"); return; }
 
     fd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in dest_addr;
@@ -118,20 +118,20 @@ void ircRelay::Start() {
         Stop();
     }
 
-    bz_debugMessage(1, "Started ircRelay custom plugin");
+    bz_debugMessage(2, "Started ircRelay custom plugin");
 }
 
 void ircRelay::Stop() {
-    bz_debugMessage(1, "Stopping ircRelay custom plugin");
+    bz_debugMessage(2, "Stopping ircRelay custom plugin");
 
     close(fd);
     fd = 0;
 
-    bz_debugMessage(1, "Stopped ircRelay custom plugin");
+    bz_debugMessage(2, "Stopped ircRelay custom plugin");
 }
 
 void ircRelay::Cleanup() {
-    bz_debugMessage(1, "Cleaning ircRelay custom plugin");
+    bz_debugMessage(2, "Cleaning ircRelay custom plugin");
 
     fc = true;
     Stop();
@@ -140,7 +140,7 @@ void ircRelay::Cleanup() {
     bz_removeCustomBZDBVariable("_ircChannel");
     bz_removeCustomBZDBVariable("_ircNick");
 
-    bz_debugMessage(1, "Cleaned ircRelay custom plugin");
+    bz_debugMessage(2, "Cleaned ircRelay custom plugin");
 }
 
 void ircRelay::Event(bz_EventData* eventData) {
@@ -195,7 +195,7 @@ void ircRelay::Event(bz_EventData* eventData) {
                         std::string subtotal = colorcode + player + ":  " + "\017" + message;
                         std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal + "\r\n";
 
-                        bz_debugMessage(2, total.c_str());
+                        bz_debugMessage(3, total.c_str());
                         if (write(fd, total.c_str(), strlen(total.c_str())) == -1) {
                             bz_debugMessage(1, "Connection lost to irc server.");
                             Stop();
@@ -269,7 +269,7 @@ void ircRelay::Event(bz_EventData* eventData) {
 
                     std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal + "\r\n";
 
-                    bz_debugMessage(2, total.c_str());
+                    bz_debugMessage(3, total.c_str());
                     if (write(fd, total.c_str(), strlen(total.c_str())) == -1) {
                         bz_debugMessage(1, "Connection lost to irc server.");
                         Stop();
@@ -329,7 +329,7 @@ void ircRelay::Event(bz_EventData* eventData) {
                     std::string subtotal = colorcode + callsign + "\017" + " left the game";
                     std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal + "\r\n";
 
-                    bz_debugMessage(2, total.c_str());
+                    bz_debugMessage(3, total.c_str());
                     if (write(fd, total.c_str(), strlen(total.c_str())) == -1) {
                         bz_debugMessage(1, "Connection lost to irc server.");
                         Stop();
@@ -346,17 +346,15 @@ void ircRelay::Event(bz_EventData* eventData) {
 }
 
 void ircRelay::Worker() {
-    bz_debugMessage(1, "Worker for irc server connection started.");
+    bz_debugMessage(2, "Worker for irc server connection started.");
 
     while (!fc) {
         if (fd == 0) {
-            bz_debugMessage(1, "Worker is waiting a moment.");
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
-            Sleep(1000);
+            Sleep(5 * 1000);
 #else
-            sleep(1000);
+            sleep(5);
 #endif
-            bz_debugMessage(1, "Worker waited a moment and will startup ircRelay now.");
 
             Start();
             continue;
@@ -392,7 +390,7 @@ void ircRelay::Worker() {
 
             std::string pong = "PONG " + pongdata + "\n";
 
-            bz_debugMessage(3, pong.c_str());
+            bz_debugMessage(4, pong.c_str());
             if (write(fd, pong.c_str(), pong.size()) == -1) {
                 bz_debugMessage(1, "Connection lost to irc server.");
                 Stop();
@@ -400,5 +398,5 @@ void ircRelay::Worker() {
         }
     }
 
-    bz_debugMessage(1, "Worker for irc server connection stopped.");
+    bz_debugMessage(2, "Worker for irc server connection stopped.");
 }
