@@ -350,11 +350,14 @@ void ircRelay::Worker() {
 
     while (!fc) {
         if (fd == 0) {
+            bz_debugMessage(1, "Worker is waiting a moment.");
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
             Sleep(1000);
 #else
             sleep(1000);
 #endif
+            bz_debugMessage(1, "Worker waited a moment and will startup ircRelay now.");
+
             Start();
             continue;
         }
