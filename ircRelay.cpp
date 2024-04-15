@@ -32,7 +32,6 @@ const char* ircRelay::Name() {
 
 void ircRelay::Init(const char* config) {
     bz_debugMessage(1, "Initializing ircRelay custom plugin");
-    plugin_up = true;
 
     Register(bz_eWorldFinalized);
     Register(bz_eFilteredChatMessageEvent);
@@ -60,9 +59,9 @@ void ircRelay::Start() {
     std::string ircAddress;
     std::string ircChannel;
     std::string ircNick;
-    if (bz_BZDBItemExists("_ircAddress")) ircAddress = bz_getBZDBString("_ircAddress"); else return;
-    if (bz_BZDBItemExists("_ircChannel")) ircChannel = bz_getBZDBString("_ircChannel"); else return;
-    if (bz_BZDBItemExists("_ircNick")) ircNick = bz_getBZDBString("_ircNick"); else return;
+    if (bz_BZDBItemExists("_ircAddress")) ircAddress = bz_getBZDBString("_ircAddress"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircAddress does not exist"); return; }
+    if (bz_BZDBItemExists("_ircChannel")) ircChannel = bz_getBZDBString("_ircChannel"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircChannel does not exist"); return; }
+    if (bz_BZDBItemExists("_ircNick")) ircNick = bz_getBZDBString("_ircNick"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircNick does not exist"); return; }
     if (ircAddress == "0.0.0.0") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because address is still 0.0.0.0"); return; }
     if (ircChannel == "") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because channel is still empty"); return; }
     if (ircNick == "") { bz_debugMessage(1, "Starting ircRelay custom plugin skipped, because nick is still empty"); return; }
@@ -133,8 +132,8 @@ void ircRelay::Stop() {
 
 void ircRelay::Cleanup() {
     bz_debugMessage(1, "Cleaning ircRelay custom plugin");
-    plugin_up = false;
 
+    fc = true;
     Stop();
     Flush();
     bz_removeCustomBZDBVariable("_ircAddress");
@@ -146,16 +145,10 @@ void ircRelay::Cleanup() {
 
 void ircRelay::Event(bz_EventData* eventData) {
     switch (eventData->eventType) {
-        case bz_eWorldFinalized: {
-            // This event is called when the world is done loading. This event contains no data and is only used for notification purposes.
-            world_up = true;
-        }
-        break;
         case bz_eFilteredChatMessageEvent: {
             // This event is called for each chat message the server receives; after the server or any plug-ins have done filtering
             bz_ChatEventData_V2* data = (bz_ChatEventData_V2*)eventData;
             if (fd == 0) break;
-            world_up = true;
 
             // Data
             // ----
@@ -218,7 +211,6 @@ void ircRelay::Event(bz_EventData* eventData) {
             // This event is called each time a player joins the game
             bz_PlayerJoinPartEventData_V1* data = (bz_PlayerJoinPartEventData_V1*)eventData;
             if (fd == 0) break;
-            world_up = true;
 
             // Data
             // ----
@@ -292,7 +284,6 @@ void ircRelay::Event(bz_EventData* eventData) {
             // This event is called each time a player leaves a game
             bz_PlayerJoinPartEventData_V1* data = (bz_PlayerJoinPartEventData_V1*)eventData;
             if (fd == 0) break;
-            world_up = true;
 
             // Data
             // ----
@@ -355,14 +346,14 @@ void ircRelay::Event(bz_EventData* eventData) {
 }
 
 void ircRelay::Worker() {
-    while (plugin_up) {
+    while (!fc) {
         if (fd == 0) {
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
             Sleep(1000);
 #else
             sleep(1000);
 #endif
-            if (world_up) ircRelay::Start();
+            ircRelay::Start();
             continue;
         }
 

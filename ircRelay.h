@@ -2,9 +2,8 @@
 #include "bzfsAPI.h"
 #include "plugin_utils.h"
 
-volatile int fd;
-volatile bool world_up;
-volatile bool plugin_up;
+int fd;
+bool fc;
 
 class ircRelay : public bz_Plugin {
     public:
