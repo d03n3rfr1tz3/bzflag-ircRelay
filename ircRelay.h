@@ -2,8 +2,11 @@
 #include "bzfsAPI.h"
 #include "plugin_utils.h"
 
+#include <regex>
+
 int fd;
 bool fc;
+std::regex rgx("[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}");
 
 class ircRelay : public bz_Plugin {
     public:
