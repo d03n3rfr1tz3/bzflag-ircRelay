@@ -1,4 +1,7 @@
-
+/*
+ * Copyright (C) 2024 Dirk Sarodnick
+ * All rights reserved.
+ */
 #include "bzfsAPI.h"
 #include "plugin_utils.h"
 
