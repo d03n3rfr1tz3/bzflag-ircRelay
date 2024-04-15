@@ -346,6 +346,8 @@ void ircRelay::Event(bz_EventData* eventData) {
 }
 
 void ircRelay::Worker() {
+    bz_debugMessage(1, "Worker for irc server connection started.");
+
     while (!fc) {
         if (fd == 0) {
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
@@ -353,7 +355,7 @@ void ircRelay::Worker() {
 #else
             sleep(1000);
 #endif
-            ircRelay::Start();
+            Start();
             continue;
         }
 
@@ -394,4 +396,6 @@ void ircRelay::Worker() {
             }
         }
     }
+
+    bz_debugMessage(1, "Worker for irc server connection stopped.");
 }
