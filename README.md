@@ -33,9 +33,12 @@ These custom BZDB variables can be configured with `-set` in configuration files
 
 | Name | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
-| `_ircAddress` | string |  | The IP address of your IRC server |
-| `_ircChannel` | string |  | The channel your IRC Relay should join |
-| `_ircNick` | string |  | The nickname your IRC Relay should use |
+| `_ircAddress` | string |  | Required. The IP address of your IRC server. |
+| `_ircChannel` | string |  | Required. The channel your IRC Relay should join. |
+| `_ircNick` | string |  | Required. The nickname your IRC Relay should use. |
+| `_ircPass` | string |  | Optional. The password for the IRC server. |
+| `_ircAuthType` | string |  | Optional. The authentication type of the IRC server. Choose one: `AuthServ`, `NickServ` or `Q`. |
+| `_ircAuthPass` | string |  | Optional. The authentication password for the IRC server. |
 
 
 ## License
