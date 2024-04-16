@@ -46,7 +46,8 @@ void ircRelay::Init(const char* config) {
     bz_registerCustomBZDBString("_ircChannel", "", 0, false);
     bz_registerCustomBZDBString("_ircNick", "", 0, false);
     bz_registerCustomBZDBString("_ircPass", "", 0, false);
-    bz_registerCustomBZDBString("_ircAuth", "", 0, false);
+    bz_registerCustomBZDBString("_ircAuthType", "", 0, false);
+    bz_registerCustomBZDBString("_ircAuthPass", "", 0, false);
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
     DWORD thread;
@@ -67,12 +68,14 @@ void ircRelay::Start() {
     std::string ircChannel;
     std::string ircNick;
     std::string ircPass;
-    std::string ircAuth;
+    std::string ircAuthType;
+    std::string ircAuthPass;
     if (bz_BZDBItemExists("_ircAddress")) ircAddress = bz_getBZDBString("_ircAddress"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircAddress does not exist"); return; }
     if (bz_BZDBItemExists("_ircChannel")) ircChannel = bz_getBZDBString("_ircChannel"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircChannel does not exist"); return; }
     if (bz_BZDBItemExists("_ircNick")) ircNick = bz_getBZDBString("_ircNick"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircNick does not exist"); return; }
     if (bz_BZDBItemExists("_ircPass")) ircPass = bz_getBZDBString("_ircPass"); else ircPass = "";
-    if (bz_BZDBItemExists("_ircAuth")) ircAuth = bz_getBZDBString("_ircAuth"); else ircAuth = "";
+    if (bz_BZDBItemExists("_ircAuthType")) ircAuthType = bz_getBZDBString("_ircAuthType"); else ircAuthType = "";
+    if (bz_BZDBItemExists("_ircAuthPass")) ircAuthPass = bz_getBZDBString("_ircAuthPass"); else ircAuthPass = "";
     if (ircAddress == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because address is still empty"); return; }
     if (ircChannel == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because channel is still empty"); return; }
     if (ircNick == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because nick is still empty"); return; }
@@ -136,9 +139,17 @@ void ircRelay::Start() {
     // receive until PING
     Receive("PING");
 
-    // send auth line
-    if (ircAuth != "") {
-        Send(ircAuth, 3);
+    // send auth
+    if (ircAuthType == "AuthServ") {
+        Send("PRIVMSG AuthServ :AUTH " + ircNick + " " + ircAuthPass, 3);
+        Receive("");
+    }
+    if (ircAuthType == "NickServ") {
+        Send("PRIVMSG NickServ :IDENTIFY " + ircAuthPass, 3);
+        Receive("");
+    }
+    if (ircAuthType == "Q") {
+        Send("PRIVMSG Q@CServe.quakenet.org :AUTH " + ircNick + " " + ircAuthPass, 3);
         Receive("");
     }
 
@@ -171,7 +182,8 @@ void ircRelay::Cleanup() {
     bz_removeCustomBZDBVariable("_ircChannel");
     bz_removeCustomBZDBVariable("_ircNick");
     bz_removeCustomBZDBVariable("_ircPass");
-    bz_removeCustomBZDBVariable("_ircAuth");
+    bz_removeCustomBZDBVariable("_ircAuthType");
+    bz_removeCustomBZDBVariable("_ircAuthPass");
 
     bz_debugMessage(2, "Cleaned ircRelay custom plugin");
 }
