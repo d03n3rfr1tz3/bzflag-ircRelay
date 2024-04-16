@@ -1,9 +1,9 @@
 # IRC Relay
 
-[![Compile Plugin](https://github.com/d03n3rfr1tz3/bzflag-irc/actions/workflows/build.yml/badge.svg)](https://github.com/d03n3rfr1tz3/bzflag-irc/actions/workflows/build.yml)
-[![GitHub release](https://img.shields.io/github/release/d03n3rfr1tz3/bzflag-irc.svg)](https://github.com/d03n3rfr1tz3/bzflag-irc/releases/latest)
+[![Compile Plugin](https://github.com/d03n3rfr1tz3/bzflag-ircRelay/actions/workflows/build.yml/badge.svg)](https://github.com/d03n3rfr1tz3/bzflag-ircRelay/actions/workflows/build.yml)
+[![GitHub release](https://img.shields.io/github/release/d03n3rfr1tz3/bzflag-ircRelay.svg)](https://github.com/d03n3rfr1tz3/bzflag-ircRelay/releases/latest)
 ![Minimum BZFlag Version](https://img.shields.io/badge/BZFlag-v2.4.0+-blue.svg)
-[![License](https://img.shields.io/github/license/d03n3rfr1tz3/bzflag-irc.svg)](LICENSE.md)
+[![License](https://img.shields.io/github/license/d03n3rfr1tz3/bzflag-ircRelay.svg)](LICENSE.md)
 
 This plugin is a revival of the IRC Relay plugin from the BZFlag forum user `wegstar`.
 It should work with version 2.4.x and also replaces the usage of a separate config.txt
