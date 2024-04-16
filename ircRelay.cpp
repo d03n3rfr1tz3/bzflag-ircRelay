@@ -37,7 +37,7 @@ void ircRelay::Init(const char* config) {
 
     // register events
     Register(bz_eBZDBChange);
-    Register(bz_eFilteredChatMessageEvent);
+    Register(bz_eRawChatMessageEvent);
     Register(bz_ePlayerJoinEvent);
     Register(bz_ePlayerPartEvent);
 
@@ -213,31 +213,32 @@ void ircRelay::Event(bz_EventData* eventData) {
             }
         }
         break;
-        case bz_eFilteredChatMessageEvent: {
-            // This event is called for each chat message the server receives; after the server or any plug-ins have done filtering
+        case bz_eRawChatMessageEvent:
+        {
+            // This event is called for each chat message the server receives. It is called before any filtering is done.
             bz_ChatEventData_V2* data = (bz_ChatEventData_V2*)eventData;
             if (fd == 0) break;
 
             // Data
             // ----
             // (int)             from        - The player ID sending the message.
-            // (int)             to          - The player ID that the message is to if the message is to an individual, or a broadcast. If the message is a broadcast the id will be `BZ_ALLUSERS`.
+            // (int)             to          - The player ID that the message is to if the message is to an individual, or a broadcast. If the message is a broadcast the id will be BZ_ALLUSERS.
             // (bz_eTeamType)    team        - The team the message is for if it not for an individual or a broadcast. If it is not a team message the team will be eNoTeam.
-            // (bz_ApiString)    message     - The filtered final text of the message.
-            // (bz_eMessageType) messageType - The type of message being sent.
+            // (bz_ApiString)    message     - The original content of the message before any filtering happens.
+            // (bz_eMessageType) messageType - The type of message being sent
             // (double)          eventTime   - The time of the event.
 
             std::string ircChannel = bz_BZDBItemExists("_ircChannel") ? bz_getBZDBString("_ircChannel") : "";
             if (ircChannel == "") break;
 
             bz_BasePlayerRecord* speaker = bz_getPlayerByIndex(data->from);
-            if (speaker != NULL) {
-                std::string message = data->message.c_str(); //um... yeah
-                std::string player = speaker->callsign.c_str();
+            if (data->to == BZ_ALLUSERS && speaker != NULL) {
+                std::string message = data->message;
+                std::string player = speaker->callsign;
                 int team = speaker->team;
                 std::string colorcode;
 
-                if (message.substr(0, 1) != "/") {//no slash commands
+                if (message.length() > 0 && message.substr(0, 1) != "/") {//no slash commands
                     if (team == 0)
                         colorcode = "\00307"; // rogue
 
@@ -260,7 +261,14 @@ void ircRelay::Event(bz_EventData* eventData) {
                         colorcode = "\00314"; // rabbit
 
                     if (message != "bzadminping") {// if message is not a bzadminping
-                        std::string subtotal = colorcode + player + ":  " + "\017" + message;
+                        std::string subtotal;
+                        if (data->messageType == eActionMessage) {
+                            subtotal = colorcode + player + " " + "\017" + message;
+                        }
+                        else {
+                            subtotal = colorcode + player + ": " + "\017" + message;
+                        }
+
                         std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal;
 
                         Send(total, 3);
@@ -287,8 +295,8 @@ void ircRelay::Event(bz_EventData* eventData) {
 
             bz_BasePlayerRecord* joiner = data->record;
             if (joiner != NULL) {
-                std::string callsign = joiner->callsign.c_str();
-                std::string ip = joiner->ipAddress.c_str();
+                std::string callsign = joiner->callsign;
+                std::string ip = joiner->ipAddress;
                 int team = joiner->team;
                 std::string colorcode;
                 std::string player_team;
@@ -357,7 +365,7 @@ void ircRelay::Event(bz_EventData* eventData) {
 
             bz_BasePlayerRecord* leaver = data->record;
             if (leaver != NULL) {
-                std::string callsign = leaver->callsign.c_str();
+                std::string callsign = leaver->callsign;
                 int team = leaver->team;
                 std::string colorcode;
 
