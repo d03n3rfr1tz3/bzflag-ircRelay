@@ -45,6 +45,7 @@ void ircRelay::Init(const char* config) {
     bz_registerCustomBZDBString("_ircAddress", "", 0, false);
     bz_registerCustomBZDBString("_ircChannel", "", 0, false);
     bz_registerCustomBZDBString("_ircNick", "", 0, false);
+    bz_registerCustomBZDBString("_ircPass", "", 0, false);
     bz_registerCustomBZDBString("_ircAuth", "", 0, false);
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
@@ -65,10 +66,12 @@ void ircRelay::Start() {
     std::string ircAddress;
     std::string ircChannel;
     std::string ircNick;
+    std::string ircPass;
     std::string ircAuth;
     if (bz_BZDBItemExists("_ircAddress")) ircAddress = bz_getBZDBString("_ircAddress"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircAddress does not exist"); return; }
     if (bz_BZDBItemExists("_ircChannel")) ircChannel = bz_getBZDBString("_ircChannel"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircChannel does not exist"); return; }
     if (bz_BZDBItemExists("_ircNick")) ircNick = bz_getBZDBString("_ircNick"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircNick does not exist"); return; }
+    if (bz_BZDBItemExists("_ircPass")) ircPass = bz_getBZDBString("_ircPass"); else ircPass = "";
     if (bz_BZDBItemExists("_ircAuth")) ircAuth = bz_getBZDBString("_ircAuth"); else ircAuth = "";
     if (ircAddress == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because address is still empty"); return; }
     if (ircChannel == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because channel is still empty"); return; }
@@ -119,6 +122,11 @@ void ircRelay::Start() {
     // receive something before sending
     Receive("");
 
+    // send pass
+    if (ircPass != "") {
+        Send("PASS " + ircPass, 3);
+    }
+
     // send nick
     Send("NICK " + ircNick, 3);
 
@@ -162,6 +170,7 @@ void ircRelay::Cleanup() {
     bz_removeCustomBZDBVariable("_ircAddress");
     bz_removeCustomBZDBVariable("_ircChannel");
     bz_removeCustomBZDBVariable("_ircNick");
+    bz_removeCustomBZDBVariable("_ircPass");
     bz_removeCustomBZDBVariable("_ircAuth");
 
     bz_debugMessage(2, "Cleaned ircRelay custom plugin");
@@ -182,7 +191,7 @@ void ircRelay::Event(bz_EventData* eventData) {
             // (double)       eventTime - This value is the local server time of the event.
 
             // restart on changing address or channel
-            if (data->key == "_ircAddress" || data->key == "_ircChannel" || data->key == "_ircAuth") {
+            if (data->key == "_ircAddress" || data->key == "_ircChannel" || data->key == "_ircPass" || data->key == "_ircAuth") {
                 Stop();
             }
 
