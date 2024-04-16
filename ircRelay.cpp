@@ -263,7 +263,7 @@ void ircRelay::Event(bz_EventData* eventData) {
                     if (message != "bzadminping") {// if message is not a bzadminping
                         std::string subtotal;
                         if (data->messageType == eActionMessage) {
-                            subtotal = colorcode + player + " " + "\017" + message;
+                            subtotal = colorcode + player + " " + message;
                         }
                         else {
                             subtotal = colorcode + player + ": " + "\017" + message;
