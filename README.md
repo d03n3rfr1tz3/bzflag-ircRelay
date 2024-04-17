@@ -39,7 +39,7 @@ These custom BZDB variables can be configured with `-set` in configuration files
 | `_ircPass` | string |  | Optional. The password for the IRC server. |
 | `_ircAuthType` | string |  | Optional. The authentication type of the IRC server. Choose one: `AuthServ`, `NickServ` or `Q`. |
 | `_ircAuthPass` | string |  | Optional. The authentication password for the IRC server. |
-
+| `_ircIgnore` | string |  | Optional. Comma separated list of ignored IRC users. Messages from these users will not be passed into the BZFlag chat. |
 
 ## License
 
