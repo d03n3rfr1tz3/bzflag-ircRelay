@@ -456,7 +456,8 @@ void ircRelay::Receive(std::string until) {
                 if (ircIgnores.length() > 0) {
                     size_t ignorePos = 0;
                     std::string ircIgnore;
-                    while ((ignorePos = ircIgnores.find(ignoreDelimiter)) != std::string::npos) {
+                    while ((ignorePos = ircIgnores.find(ignoreDelimiter)) != std::string::npos || ircIgnores.length() > 0) {
+                        if (ignorePos == std::string::npos) ignorePos = ircIgnores.length();
                         ircIgnore = ircIgnores.substr(0, ignorePos);
                         ircIgnores.erase(0, ignorePos + ignoreDelimiter.length());
 
@@ -468,14 +469,20 @@ void ircRelay::Receive(std::string until) {
 
                 // send the IRC message into the BZFlag chat
                 if (!ignored) {
-                    if (message.substr(0, 8) == "\001ACTION ") {
+                    if (message.length() > 8 && message.substr(0, 7) == "\001ACTION") {
                         std::string total = username + " " + message.substr(9, message.size());
                         bz_sendTextMessage(BZ_SERVER, BZ_ALLUSERS, eActionMessage, total.substr(0, total.size() - 1).c_str());
+                        bz_debugMessage(4, total.c_str());
                     }
                     else {
                         std::string total = username + ": " + message;
-                        bz_sendTextMessage(BZ_SERVER, BZ_ALLUSERS, eChatMessage, total.c_str());
+                        bz_sendTextMessage(BZ_SERVER, BZ_ALLUSERS, total.c_str());
+                        bz_debugMessage(4, total.c_str());
                     }
+                }
+                else {
+                    std::string debugMessage = "Message from " + username + " got ignored";
+                    bz_debugMessage(3, debugMessage.c_str());
                 }
             }
 
