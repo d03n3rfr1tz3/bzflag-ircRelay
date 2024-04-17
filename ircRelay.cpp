@@ -266,17 +266,18 @@ void ircRelay::Event(bz_EventData* eventData) {
                         colorcode = "\00314"; // rabbit
 
                     if (message != "bzadminping") {// if message is not a bzadminping
-                        std::string subtotal;
+                        
                         if (data->messageType == eActionMessage) {
-                            subtotal = colorcode + player + " " + message;
+                            std::string subtotal = colorcode + player + " " + message;
+                            std::string total = "PRIVMSG #" + ircChannel + " :\001ACTION " + subtotal + "\001";
+                            Send(total, 3);
                         }
                         else {
-                            subtotal = colorcode + player + ": " + "\017" + message;
+                            std::string subtotal = colorcode + player + ": " + "\017" + message;
+                            std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal;
+                            Send(total, 3);
                         }
 
-                        std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal;
-
-                        Send(total, 3);
                         break;
                     }
                 }
@@ -470,7 +471,7 @@ void ircRelay::Receive(std::string until) {
                 // send the IRC message into the BZFlag chat
                 if (!ignored) {
                     if (message.length() > 8 && message.substr(0, 7) == "\001ACTION") {
-                        std::string total = username + " " + message.substr(9, message.size());
+                        std::string total = username + " " + message.substr(8, message.size());
                         bz_sendTextMessage(BZ_SERVER, BZ_ALLUSERS, eActionMessage, total.substr(0, total.size() - 1).c_str());
                         bz_debugMessage(4, total.c_str());
                     }
