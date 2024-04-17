@@ -48,6 +48,7 @@ void ircRelay::Init(const char* config) {
     bz_registerCustomBZDBString("_ircPass", "", 0, false);
     bz_registerCustomBZDBString("_ircAuthType", "", 0, false);
     bz_registerCustomBZDBString("_ircAuthPass", "", 0, false);
+    bz_registerCustomBZDBString("_ircIgnore", "", 0, false);
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
     DWORD thread;
@@ -134,10 +135,13 @@ void ircRelay::Start() {
     Send("NICK " + ircNick, 3);
 
     // send user
-    Send("USER ircRelay 0 * :BZFlag ircRelay", 3);
+    Send("USER ircrelay 0 * :BZFlag ircRelay", 3);
 
     // receive until PING
     Receive("PING");
+
+    // give the server an additional second
+    Wait(1);
 
     // send auth
     if (ircAuthType == "AuthServ") {
@@ -184,6 +188,7 @@ void ircRelay::Cleanup() {
     bz_removeCustomBZDBVariable("_ircPass");
     bz_removeCustomBZDBVariable("_ircAuthType");
     bz_removeCustomBZDBVariable("_ircAuthPass");
+    bz_removeCustomBZDBVariable("_ircIgnore");
 
     bz_debugMessage(2, "Cleaned ircRelay custom plugin");
 }
@@ -424,40 +429,64 @@ void ircRelay::Receive(std::string until) {
         if (data.length() == 0) return;
 
         // split received data into lines
-        size_t pos = 0;
-        std::string line;
-        std::string delimiter = "\r\n";
-        while ((pos = data.find(delimiter)) != std::string::npos) {
-            line = data.substr(0, pos);
-            data.erase(0, pos + delimiter.length());
-            bz_debugMessage(4, line.c_str());
+        size_t dataPos = 0;
+        std::string dataLine;
+        std::string dataDelimiter = "\r\n";
+        while ((dataPos = data.find(dataDelimiter)) != std::string::npos) {
+            dataLine = data.substr(0, dataPos);
+            data.erase(0, dataPos + dataDelimiter.length());
+            bz_debugMessage(4, dataLine.c_str());
 
             // passing messages from the channel to BZFlag
-            if (line.find("PRIVMSG", 0) != std::string::npos) {
-                std::string::size_type pos = line.find(":", 0);
-                std::string::size_type endpos = line.find("!", 0);
-                std::string username = line.substr(pos + 1, endpos - 1);
+            if (dataLine.substr(0, 7) == "PRIVMSG") {
+                // get username
+                std::string::size_type startpos = dataLine.find(":", 0);
+                std::string::size_type endpos = dataLine.find("!", 0);
+                std::string username = dataLine.substr(startpos + 1, endpos - 1);
 
-                pos = line.find(":", 1);
-                endpos = line.size();
-                std::string message = line.substr(pos + 1, endpos);
+                // get message
+                startpos = dataLine.find(":", 1);
+                endpos = dataLine.size();
+                std::string message = dataLine.substr(startpos + 1, endpos);
 
-                std::string total = username + ": " + message;
+                // check if username is on the ignore list
+                bool ignored = false;
+                std::string ignoreDelimiter = ",";
+                std::string ircIgnores = bz_BZDBItemExists("_ircIgnore") ? bz_getBZDBString("_ircIgnore") : "";
+                if (ircIgnores.length() > 0) {
+                    size_t ignorePos = 0;
+                    std::string ircIgnore;
+                    while ((ignorePos = ircIgnores.find(ignoreDelimiter)) != std::string::npos) {
+                        ircIgnore = ircIgnores.substr(0, ignorePos);
+                        ircIgnores.erase(0, ignorePos + ignoreDelimiter.length());
 
-                bz_sendTextMessage(BZ_SERVER, BZ_ALLUSERS, total.c_str());
+                        if (username == ircIgnore) {
+                            ignored = true;
+                        }
+                    }
+                }
+
+                // send the IRC message into the BZFlag chat
+                if (!ignored) {
+                    if (message.substr(0, 8) == "\001ACTION ") {
+                        std::string total = username + " " + message.substr(9, message.size());
+                        bz_sendTextMessage(BZ_SERVER, BZ_ALLUSERS, eActionMessage, total.substr(0, total.size() - 1).c_str());
+                    }
+                    else {
+                        std::string total = username + ": " + message;
+                        bz_sendTextMessage(BZ_SERVER, BZ_ALLUSERS, eChatMessage, total.c_str());
+                    }
+                }
             }
 
             // respond to pings
-            if (line.substr(0, 4) == "PING") {
-                std::string ping = line;
-                std::string pongdata = ping.substr(5, ping.size());
-
+            if (dataLine.substr(0, 4) == "PING") {
+                std::string pongdata = dataLine.substr(5, dataLine.size());
                 std::string pong = "PONG " + pongdata;
-
                 Send(pong, 4);
             }
 
-            if (until == "" || line.substr(0, until.length()) == until) {
+            if (until == "" || dataLine.substr(0, until.length()) == until) {
                 found = true;
             }
         }
@@ -474,18 +503,21 @@ void ircRelay::Send(std::string data, int debugLevel) {
     }
 }
 
+void ircRelay::Wait(unsigned int seconds) {
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+    Sleep(seconds * 1000);
+#else
+    sleep(seconds);
+#endif
+}
+
 void ircRelay::Worker() {
     bz_debugMessage(2, "Worker for irc server connection started");
 
     while (!fc) {
         // start if not already done
         if (fd == 0) {
-#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
-            Sleep(5 * 1000);
-#else
-            sleep(5);
-#endif
-
+            Wait(5);
             Start();
             continue;
         }
