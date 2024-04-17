@@ -438,7 +438,7 @@ void ircRelay::Receive(std::string until) {
             bz_debugMessage(4, dataLine.c_str());
 
             // passing messages from the channel to BZFlag
-            if (dataLine.substr(0, 7) == "PRIVMSG") {
+            if (dataLine.find("PRIVMSG", 0) != std::string::npos) {
                 // get username
                 std::string::size_type startpos = dataLine.find(":", 0);
                 std::string::size_type endpos = dataLine.find("!", 0);
