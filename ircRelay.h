@@ -9,6 +9,8 @@
 
 int fd;
 bool fc;
+unsigned int pingCount;
+unsigned int retryCount;
 std::regex rgx("[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}");
 
 class ircRelay : public bz_Plugin {
@@ -24,6 +26,6 @@ class ircRelay : public bz_Plugin {
         static void Receive(std::string until);
         static void Send(std::string data, int debugLevel);
 
-        static void Wait(unsigned int seconds);
+        static void Wait(unsigned int seconds, unsigned int milliseconds);
         static void Worker();
 };

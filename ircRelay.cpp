@@ -122,6 +122,7 @@ void ircRelay::Start() {
         fd = 0;
         return;
     }
+    Wait(0, 10);
 
     // receive something before sending
     Receive("");
@@ -141,7 +142,7 @@ void ircRelay::Start() {
     Receive("PING");
 
     // give the server an additional second
-    Wait(1);
+    Wait(1, 0);
 
     // send auth
     if (ircAuthType == "AuthServ") {
@@ -492,6 +493,7 @@ void ircRelay::Receive(std::string until) {
                 std::string pongdata = dataLine.substr(5, dataLine.size());
                 std::string pong = "PONG " + pongdata;
                 Send(pong, 4);
+                pingCount++;
             }
 
             if (until == "" || dataLine.substr(0, until.length()) == until) {
@@ -511,21 +513,30 @@ void ircRelay::Send(std::string data, int debugLevel) {
     }
 }
 
-void ircRelay::Wait(unsigned int seconds) {
+void ircRelay::Wait(unsigned int seconds, unsigned int milliseconds) {
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
-    Sleep(seconds * 1000);
+    Sleep((seconds * 1000) + milliseconds);
 #else
-    sleep(seconds);
+    if (seconds > 0) sleep(seconds);
+    if (milliseconds > 0) usleep(milliseconds * 1000);
 #endif
 }
 
 void ircRelay::Worker() {
     bz_debugMessage(2, "Worker for irc server connection started");
+    Wait(0, 10);
 
     while (!fc) {
         // start if not already done
         if (fd == 0) {
-            Wait(5);
+            // wait longer with every attempt
+            unsigned int sleep = 5;
+            if (pingCount > 5) { pingCount = 0; retryCount = 0; }
+            for (int i = 0; i < retryCount; i++) { sleep = sleep * 2; }
+            Wait(sleep, 0);
+            retryCount++;
+
+            // start now
             Start();
             continue;
         }
