@@ -43,6 +43,7 @@ void ircRelay::Init(const char* config) {
 
     // register config
     bz_registerCustomBZDBString("_ircAddress", "", 0, false);
+    bz_registerCustomBZDBInt("_ircPort", 6667, 0, false);
     bz_registerCustomBZDBString("_ircChannel", "", 0, false);
     bz_registerCustomBZDBString("_ircNick", "", 0, false);
     bz_registerCustomBZDBString("_ircPass", "", 0, false);
@@ -66,12 +67,14 @@ void ircRelay::Start() {
 
     // get config
     std::string ircAddress;
+    int ircPort;
     std::string ircChannel;
     std::string ircNick;
     std::string ircPass;
     std::string ircAuthType;
     std::string ircAuthPass;
     if (bz_BZDBItemExists("_ircAddress")) ircAddress = bz_getBZDBString("_ircAddress"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircAddress does not exist"); return; }
+    if (bz_BZDBItemExists("_ircPort")) ircAddress = bz_getBZDBInt("_ircPort"); else ircPort = 6667;
     if (bz_BZDBItemExists("_ircChannel")) ircChannel = bz_getBZDBString("_ircChannel"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircChannel does not exist"); return; }
     if (bz_BZDBItemExists("_ircNick")) ircNick = bz_getBZDBString("_ircNick"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircNick does not exist"); return; }
     if (bz_BZDBItemExists("_ircPass")) ircPass = bz_getBZDBString("_ircPass"); else ircPass = "";
@@ -94,7 +97,7 @@ void ircRelay::Start() {
     struct sockaddr_in dest_addr;
     memset(&dest_addr, 0, sizeof(dest_addr));
     dest_addr.sin_family = AF_INET;
-    dest_addr.sin_port = htons(6667);
+    dest_addr.sin_port = htons(ircPort);
 
     if (std::regex_match(ircAddress, rgx)) {
         bz_debugMessage(2, "Given irc server address looks like an IP");
@@ -184,6 +187,7 @@ void ircRelay::Cleanup() {
 
     // deregister config
     bz_removeCustomBZDBVariable("_ircAddress");
+    bz_removeCustomBZDBVariable("_ircPort");
     bz_removeCustomBZDBVariable("_ircChannel");
     bz_removeCustomBZDBVariable("_ircNick");
     bz_removeCustomBZDBVariable("_ircPass");
@@ -209,7 +213,7 @@ void ircRelay::Event(bz_EventData* eventData) {
             // (double)       eventTime - This value is the local server time of the event.
 
             // restart on changing address or channel
-            if (data->key == "_ircAddress" || data->key == "_ircChannel" || data->key == "_ircPass" || data->key == "_ircAuth") {
+            if (data->key == "_ircAddress" || data->key == "_ircPort" || data->key == "_ircChannel" || data->key == "_ircPass" || data->key == "_ircAuth") {
                 Stop();
             }
 

@@ -34,6 +34,7 @@ These custom BZDB variables can be configured with `-set` in configuration files
 | Name | Type | Default | Description |
 | ---- | ---- | ------- | ----------- |
 | `_ircAddress` | string |  | Required. The IP address of your IRC server. |
+| `_ircPort` | int |  | Optional. The port of your IRC server. Defaults to 6667. |
 | `_ircChannel` | string |  | Required. The channel your IRC Relay should join. |
 | `_ircNick` | string |  | Required. The nickname your IRC Relay should use. |
 | `_ircPass` | string |  | Optional. The password for the IRC server. |
