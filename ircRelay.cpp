@@ -74,7 +74,7 @@ void ircRelay::Start() {
     std::string ircAuthType;
     std::string ircAuthPass;
     if (bz_BZDBItemExists("_ircAddress")) ircAddress = bz_getBZDBString("_ircAddress"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircAddress does not exist"); return; }
-    if (bz_BZDBItemExists("_ircPort")) ircAddress = bz_getBZDBInt("_ircPort"); else ircPort = 6667;
+    if (bz_BZDBItemExists("_ircPort")) ircPort = bz_getBZDBInt("_ircPort"); else ircPort = 6667;
     if (bz_BZDBItemExists("_ircChannel")) ircChannel = bz_getBZDBString("_ircChannel"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircChannel does not exist"); return; }
     if (bz_BZDBItemExists("_ircNick")) ircNick = bz_getBZDBString("_ircNick"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircNick does not exist"); return; }
     if (bz_BZDBItemExists("_ircPass")) ircPass = bz_getBZDBString("_ircPass"); else ircPass = "";
