@@ -504,6 +504,10 @@ void ircRelay::Receive(std::string until) {
                 found = true;
             }
         }
+
+        if (until == "") {
+            found = true;
+        }
     }
 }
 
