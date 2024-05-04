@@ -420,7 +420,9 @@ void ircRelay::Event(bz_EventData* eventData) {
     }
 }
 
-void ircRelay::Receive(std::string until) {
+void ircRelay::Receive(const char* until) {
+    std::string untilString = until == nullptr ? std::string() : std::string(until);
+
     bool found = false;
     while (!found) {
         char recv_buf[1025];
@@ -500,12 +502,12 @@ void ircRelay::Receive(std::string until) {
                 pingCount++;
             }
 
-            if (until == "" || dataLine.substr(0, until.length()) == until) {
+            if (untilString == "" || dataLine.substr(0, untilString.length()) == untilString) {
                 found = true;
             }
         }
 
-        if (until == "") {
+        if (until == nullptr) {
             found = true;
         }
     }
@@ -550,7 +552,7 @@ void ircRelay::Worker() {
         }
 
         // receive messages
-        Receive("");
+        Receive(nullptr);
     }
 
     bz_debugMessage(2, "Worker for irc server connection stopped");
