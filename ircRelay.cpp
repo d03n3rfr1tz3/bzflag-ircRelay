@@ -348,11 +348,6 @@ void ircRelay::Event(bz_EventData* eventData) {
                 }
                 if (callsign != "") {//send it only it is not a list server ping
                     std::string subtotal = colorcode + callsign + "\017" + " joined as a " + player_team + " from " + ip;
-
-                    if (player_team == "observer") {
-                        subtotal = colorcode + callsign + "\017" + " joined as a " + player_team + " from " + ip;
-                    }
-
                     std::string total = "PRIVMSG #" + ircChannel + " :" + ircPrefix + subtotal;
 
                     Send(total, 3);
