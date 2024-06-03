@@ -50,6 +50,7 @@ void ircRelay::Init(const char* config) {
     bz_registerCustomBZDBString("_ircAuthType", "", 0, false);
     bz_registerCustomBZDBString("_ircAuthPass", "", 0, false);
     bz_registerCustomBZDBString("_ircIgnore", "", 0, false);
+    bz_registerCustomBZDBString("_ircPrefix", "", 0, false);
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
     DWORD thread;
@@ -73,6 +74,7 @@ void ircRelay::Start() {
     std::string ircPass;
     std::string ircAuthType;
     std::string ircAuthPass;
+    std::string ircPrefix;
     if (bz_BZDBItemExists("_ircAddress")) ircAddress = bz_getBZDBString("_ircAddress"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircAddress does not exist"); return; }
     if (bz_BZDBItemExists("_ircPort")) ircPort = bz_getBZDBInt("_ircPort"); else ircPort = 6667;
     if (bz_BZDBItemExists("_ircChannel")) ircChannel = bz_getBZDBString("_ircChannel"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircChannel does not exist"); return; }
@@ -80,6 +82,7 @@ void ircRelay::Start() {
     if (bz_BZDBItemExists("_ircPass")) ircPass = bz_getBZDBString("_ircPass"); else ircPass = "";
     if (bz_BZDBItemExists("_ircAuthType")) ircAuthType = bz_getBZDBString("_ircAuthType"); else ircAuthType = "";
     if (bz_BZDBItemExists("_ircAuthPass")) ircAuthPass = bz_getBZDBString("_ircAuthPass"); else ircAuthPass = "";
+    if (bz_BZDBItemExists("_ircPrefix")) ircPrefix = bz_getBZDBString("_ircPrefix"); else ircPrefix = "";
     if (ircAddress == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because address is still empty"); return; }
     if (ircChannel == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because channel is still empty"); return; }
     if (ircNick == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because nick is still empty"); return; }
@@ -126,9 +129,6 @@ void ircRelay::Start() {
         return;
     }
     Wait(0, 10);
-
-    // receive something before sending
-    Receive("");
 
     // send pass
     if (ircPass != "") {
@@ -194,6 +194,7 @@ void ircRelay::Cleanup() {
     bz_removeCustomBZDBVariable("_ircAuthType");
     bz_removeCustomBZDBVariable("_ircAuthPass");
     bz_removeCustomBZDBVariable("_ircIgnore");
+    bz_removeCustomBZDBVariable("_ircPrefix");
 
     bz_debugMessage(2, "Cleaned ircRelay custom plugin");
 }
@@ -239,6 +240,7 @@ void ircRelay::Event(bz_EventData* eventData) {
             // (double)          eventTime   - The time of the event.
 
             std::string ircChannel = bz_BZDBItemExists("_ircChannel") ? bz_getBZDBString("_ircChannel") : "";
+            std::string ircPrefix = bz_BZDBItemExists("_ircPrefix") ? bz_getBZDBString("_ircPrefix") : "";
             if (ircChannel == "") break;
 
             bz_BasePlayerRecord* speaker = bz_getPlayerByIndex(data->from);
@@ -274,12 +276,12 @@ void ircRelay::Event(bz_EventData* eventData) {
                         
                         if (data->messageType == eActionMessage) {
                             std::string subtotal = colorcode + player + " " + message;
-                            std::string total = "PRIVMSG #" + ircChannel + " :\001ACTION " + subtotal + "\001";
+                            std::string total = "PRIVMSG #" + ircChannel + " :\001ACTION " + ircPrefix + subtotal + "\001";
                             Send(total, 3);
                         }
                         else {
                             std::string subtotal = colorcode + player + ": " + "\017" + message;
-                            std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal;
+                            std::string total = "PRIVMSG #" + ircChannel + " :" + ircPrefix + subtotal;
                             Send(total, 3);
                         }
 
@@ -302,6 +304,7 @@ void ircRelay::Event(bz_EventData* eventData) {
             // (double)               eventTime - Time of event.
 
             std::string ircChannel = bz_BZDBItemExists("_ircChannel") ? bz_getBZDBString("_ircChannel") : "";
+            std::string ircPrefix = bz_BZDBItemExists("_ircPrefix") ? bz_getBZDBString("_ircPrefix") : "";
             if (ircChannel == "") break;
 
             bz_BasePlayerRecord* joiner = data->record;
@@ -350,7 +353,7 @@ void ircRelay::Event(bz_EventData* eventData) {
                         subtotal = colorcode + callsign + "\017" + " joined as a " + player_team + " from " + ip;
                     }
 
-                    std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal;
+                    std::string total = "PRIVMSG #" + ircChannel + " :" + ircPrefix + subtotal;
 
                     Send(total, 3);
                     break;
@@ -372,6 +375,7 @@ void ircRelay::Event(bz_EventData* eventData) {
             // (double)               eventTime - Time of event.
 
             std::string ircChannel = bz_BZDBItemExists("_ircChannel") ? bz_getBZDBString("_ircChannel") : "";
+            std::string ircPrefix = bz_BZDBItemExists("_ircPrefix") ? bz_getBZDBString("_ircPrefix") : "";
             if (ircChannel == "") break;
 
             bz_BasePlayerRecord* leaver = data->record;
@@ -406,7 +410,7 @@ void ircRelay::Event(bz_EventData* eventData) {
 
                 if (callsign != "") {//send it only it is not a list server ping
                     std::string subtotal = colorcode + callsign + "\017" + " left the game";
-                    std::string total = "PRIVMSG #" + ircChannel + " :" + subtotal;
+                    std::string total = "PRIVMSG #" + ircChannel + " :" + ircPrefix + subtotal;
 
                     Send(total, 3);
                     break;
