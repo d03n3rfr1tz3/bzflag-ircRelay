@@ -267,10 +267,13 @@ void ircRelay::Event(bz_EventData* eventData) {
                         colorcode = "\00306"; // purple team
 
                     else if (team == 5)
-                        colorcode = "\00310"; // observer
+                        colorcode = "\00314"; // rabbit
 
                     else if (team == 6)
-                        colorcode = "\00314"; // rabbit
+                        colorcode = "\00305"; // hunter
+
+                    else if (team == 7)
+                        colorcode = "\00310"; // observer
 
                     if (message != "bzadminping") {// if message is not a bzadminping
                         
@@ -336,12 +339,16 @@ void ircRelay::Event(bz_EventData* eventData) {
                     player_team = "purple player";
                 }
                 else if (team == 5) {
-                    colorcode = "\00310"; // observer
-                    player_team = "observer";
-                }
-                else if (team == 6) {
                     colorcode = "\00314"; // rabbit
                     player_team = "rabbit";
+                }
+                else if (team == 6) {
+                    colorcode = "\00305"; // hunter
+                    player_team = "hunter";
+                }
+                else if (team == 7) {
+                    colorcode = "\00310"; // observer
+                    player_team = "observer";
                 }
                 else {
                     colorcode = "\017";
@@ -395,10 +402,13 @@ void ircRelay::Event(bz_EventData* eventData) {
                     colorcode = "\00306"; // purple team
 
                 else if (team == 5)
-                    colorcode = "\00310"; // observer
+                    colorcode = "\00314"; // rabbit
 
                 else if (team == 6)
-                    colorcode = "\00314"; // rabbit
+                    colorcode = "\00305"; // hunter
+
+                else if (team == 7)
+                    colorcode = "\00310"; // observer
 
                 else
                     colorcode = "\017";
