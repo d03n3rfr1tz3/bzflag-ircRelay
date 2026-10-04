@@ -7,6 +7,7 @@
 #include "bzfsAPI.h"
 #include "plugin_utils.h"
 
+#include <fstream>
 #include <regex>
 #include <sys/types.h>
 #include <stdio.h>
@@ -41,16 +42,12 @@ void ircRelay::Init(const char* config) {
     Register(bz_ePlayerJoinEvent);
     Register(bz_ePlayerPartEvent);
 
-    // register config
-    bz_registerCustomBZDBString("_ircAddress", "", 0, false);
-    bz_registerCustomBZDBInt("_ircPort", 6667, 0, false);
-    bz_registerCustomBZDBString("_ircChannel", "", 0, false);
-    bz_registerCustomBZDBString("_ircNick", "", 0, false);
-    bz_registerCustomBZDBString("_ircPass", "", 0, false);
-    bz_registerCustomBZDBString("_ircAuthType", "", 0, false);
-    bz_registerCustomBZDBString("_ircAuthPass", "", 0, false);
-    bz_registerCustomBZDBString("_ircIgnore", "", 0, false);
-    bz_registerCustomBZDBString("_ircPrefix", "", 0, false);
+    // read config values
+    ParseConfig(config);
+    if (!HasSetting("channel")) bz_registerCustomBZDBString("_ircChannel", "", 0, false);
+    if (!HasSetting("nick")) bz_registerCustomBZDBString("_ircNick", "", 0, false);
+    if (!HasSetting("ignore")) bz_registerCustomBZDBString("_ircIgnore", "", 0, false);
+    if (!HasSetting("prefix")) bz_registerCustomBZDBString("_ircPrefix", "", 0, false);
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
     DWORD thread;
@@ -67,23 +64,15 @@ void ircRelay::Start() {
     bz_debugMessage(2, "Starting ircRelay custom plugin");
 
     // get config
-    std::string ircAddress;
-    int ircPort;
-    std::string ircChannel;
-    std::string ircNick;
-    std::string ircPass;
-    std::string ircAuthType;
-    std::string ircAuthPass;
-    std::string ircPrefix;
-    if (bz_BZDBItemExists("_ircAddress")) ircAddress = bz_getBZDBString("_ircAddress"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircAddress does not exist"); return; }
-    if (bz_BZDBItemExists("_ircPort")) ircPort = bz_getBZDBInt("_ircPort"); else ircPort = 6667;
-    if (bz_BZDBItemExists("_ircChannel")) ircChannel = bz_getBZDBString("_ircChannel"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircChannel does not exist"); return; }
-    if (bz_BZDBItemExists("_ircNick")) ircNick = bz_getBZDBString("_ircNick"); else { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because _ircNick does not exist"); return; }
-    if (bz_BZDBItemExists("_ircPass")) ircPass = bz_getBZDBString("_ircPass"); else ircPass = "";
-    if (bz_BZDBItemExists("_ircAuthType")) ircAuthType = bz_getBZDBString("_ircAuthType"); else ircAuthType = "";
-    if (bz_BZDBItemExists("_ircAuthPass")) ircAuthPass = bz_getBZDBString("_ircAuthPass"); else ircAuthPass = "";
-    if (bz_BZDBItemExists("_ircPrefix")) ircPrefix = bz_getBZDBString("_ircPrefix"); else ircPrefix = "";
-    if (ircAddress == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because address is still empty"); return; }
+    std::string ircAddress = GetSetting("address", nullptr);
+    int ircPort = atoi(GetSetting("port", nullptr).c_str());
+    std::string ircChannel = GetSetting("channel", "_ircChannel");
+    std::string ircNick = GetSetting("nick", "_ircNick");
+    std::string ircPass = GetSetting("pass", nullptr);
+    std::string ircAuthType = GetSetting("authtype", nullptr);
+    std::string ircAuthPass = GetSetting("authpass", nullptr);
+    if (ircPort <= 0) ircPort = 6667;
+    if (ircAddress == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because address is empty (it can only be given by the plugin config, e.g. -loadplugin ircRelay,/path/to/ircRelay.conf)"); return; }
     if (ircChannel == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because channel is still empty"); return; }
     if (ircNick == "") { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because nick is still empty"); return; }
     if (fd != 0) { bz_debugMessage(2, "Starting ircRelay custom plugin skipped, because its already running"); return; }
@@ -132,7 +121,7 @@ void ircRelay::Start() {
 
     // send pass
     if (ircPass != "") {
-        Send("PASS " + ircPass, 3);
+        Send("PASS " + ircPass, 3, "PASS ********");
     }
 
     // send nick
@@ -149,15 +138,15 @@ void ircRelay::Start() {
 
     // send auth
     if (ircAuthType == "AuthServ") {
-        Send("PRIVMSG AuthServ :AUTH " + ircNick + " " + ircAuthPass, 3);
+        Send("PRIVMSG AuthServ :AUTH " + ircNick + " " + ircAuthPass, 3, ("PRIVMSG AuthServ :AUTH " + ircNick + " ********").c_str());
         Receive("");
     }
     if (ircAuthType == "NickServ") {
-        Send("PRIVMSG NickServ :IDENTIFY " + ircAuthPass, 3);
+        Send("PRIVMSG NickServ :IDENTIFY " + ircAuthPass, 3, "PRIVMSG NickServ :IDENTIFY ********");
         Receive("");
     }
     if (ircAuthType == "Q") {
-        Send("PRIVMSG Q@CServe.quakenet.org :AUTH " + ircNick + " " + ircAuthPass, 3);
+        Send("PRIVMSG Q@CServe.quakenet.org :AUTH " + ircNick + " " + ircAuthPass, 3, ("PRIVMSG Q@CServe.quakenet.org :AUTH " + ircNick + " ********").c_str());
         Receive("");
     }
 
@@ -186,15 +175,10 @@ void ircRelay::Cleanup() {
     Flush();
 
     // deregister config
-    bz_removeCustomBZDBVariable("_ircAddress");
-    bz_removeCustomBZDBVariable("_ircPort");
-    bz_removeCustomBZDBVariable("_ircChannel");
-    bz_removeCustomBZDBVariable("_ircNick");
-    bz_removeCustomBZDBVariable("_ircPass");
-    bz_removeCustomBZDBVariable("_ircAuthType");
-    bz_removeCustomBZDBVariable("_ircAuthPass");
-    bz_removeCustomBZDBVariable("_ircIgnore");
-    bz_removeCustomBZDBVariable("_ircPrefix");
+    if (!HasSetting("channel")) bz_removeCustomBZDBVariable("_ircChannel");
+    if (!HasSetting("nick")) bz_removeCustomBZDBVariable("_ircNick");
+    if (!HasSetting("ignore")) bz_removeCustomBZDBVariable("_ircIgnore");
+    if (!HasSetting("prefix")) bz_removeCustomBZDBVariable("_ircPrefix");
 
     bz_debugMessage(2, "Cleaned ircRelay custom plugin");
 }
@@ -213,8 +197,8 @@ void ircRelay::Event(bz_EventData* eventData) {
             // (bz_ApiString) value     - What the variable was changed too
             // (double)       eventTime - This value is the local server time of the event.
 
-            // restart on changing address or channel
-            if (data->key == "_ircAddress" || data->key == "_ircPort" || data->key == "_ircChannel" || data->key == "_ircPass" || data->key == "_ircAuth") {
+            // restart on changing channel
+            if (data->key == "_ircChannel") {
                 Stop();
             }
 
@@ -239,8 +223,8 @@ void ircRelay::Event(bz_EventData* eventData) {
             // (bz_eMessageType) messageType - The type of message being sent
             // (double)          eventTime   - The time of the event.
 
-            std::string ircChannel = bz_BZDBItemExists("_ircChannel") ? bz_getBZDBString("_ircChannel") : "";
-            std::string ircPrefix = bz_BZDBItemExists("_ircPrefix") ? bz_getBZDBString("_ircPrefix") : "";
+            std::string ircChannel = GetSetting("channel", "_ircChannel");
+            std::string ircPrefix = GetSetting("prefix", "_ircPrefix");
             if (ircChannel == "") break;
 
             bz_BasePlayerRecord* speaker = bz_getPlayerByIndex(data->from);
@@ -306,8 +290,8 @@ void ircRelay::Event(bz_EventData* eventData) {
             // (bz_BasePlayerRecord*) record    - The player record for the joining player
             // (double)               eventTime - Time of event.
 
-            std::string ircChannel = bz_BZDBItemExists("_ircChannel") ? bz_getBZDBString("_ircChannel") : "";
-            std::string ircPrefix = bz_BZDBItemExists("_ircPrefix") ? bz_getBZDBString("_ircPrefix") : "";
+            std::string ircChannel = GetSetting("channel", "_ircChannel");
+            std::string ircPrefix = GetSetting("prefix", "_ircPrefix");
             if (ircChannel == "") break;
 
             bz_BasePlayerRecord* joiner = data->record;
@@ -376,8 +360,8 @@ void ircRelay::Event(bz_EventData* eventData) {
             // (bz_ApiString)         reason    - The reason for leaving, such as a kick or a ban
             // (double)               eventTime - Time of event.
 
-            std::string ircChannel = bz_BZDBItemExists("_ircChannel") ? bz_getBZDBString("_ircChannel") : "";
-            std::string ircPrefix = bz_BZDBItemExists("_ircPrefix") ? bz_getBZDBString("_ircPrefix") : "";
+            std::string ircChannel = GetSetting("channel", "_ircChannel");
+            std::string ircPrefix = GetSetting("prefix", "_ircPrefix");
             if (ircChannel == "") break;
 
             bz_BasePlayerRecord* leaver = data->record;
@@ -469,7 +453,7 @@ void ircRelay::Receive(const char* until) {
                 // check if username is on the ignore list
                 bool ignored = false;
                 std::string ignoreDelimiter = ",";
-                std::string ircIgnores = bz_BZDBItemExists("_ircIgnore") ? bz_getBZDBString("_ircIgnore") : "";
+                std::string ircIgnores = GetSetting("ignore", "_ircIgnore");
                 if (ircIgnores.length() > 0) {
                     size_t ignorePos = 0;
                     std::string ircIgnore;
@@ -522,8 +506,85 @@ void ircRelay::Receive(const char* until) {
     }
 }
 
-void ircRelay::Send(std::string data, int debugLevel) {
-    bz_debugMessage(debugLevel, data.c_str());
+void ircRelay::ParseConfig(const char* config) {
+    std::string configString = config == nullptr ? std::string() : std::string(config);
+    pluginConfig.clear();
+    if (configString == "") return;
+
+    if (configString.find("=") != std::string::npos) {
+        // inline config, e.g. -loadplugin ircRelay,address=irc.example.org,port=6667
+        std::vector<std::string> configLines = tokenize(configString, ",", 0, false);
+        for (size_t i = 0; i < configLines.size(); i++) {
+            ParseConfigLine(configLines[i]);
+        }
+    }
+    else {
+        // config file, e.g. -loadplugin ircRelay,/path/to/ircRelay.conf
+        std::ifstream configFile(configString.c_str());
+        if (!configFile.is_open()) {
+            std::string debugMessage = "Could not open ircRelay config file " + configString;
+            bz_debugMessage(1, debugMessage.c_str());
+            return;
+        }
+
+        std::string configLine;
+        while (std::getline(configFile, configLine)) {
+            ParseConfigLine(configLine);
+        }
+    }
+
+    // log the found keys, but never their values
+    std::string configKeys;
+    for (auto it = pluginConfig.begin(); it != pluginConfig.end(); it++) {
+        if (configKeys != "") configKeys += ", ";
+        configKeys += it->first;
+    }
+    std::string debugMessage = "Found ircRelay config for: " + configKeys;
+    bz_debugMessage(2, debugMessage.c_str());
+}
+
+void ircRelay::ParseConfigLine(std::string line) {
+    std::string whitespace = " \t\r\n";
+
+    // skip empty lines and comments
+    size_t start = line.find_first_not_of(whitespace);
+    if (start == std::string::npos || line[start] == '#') return;
+
+    // split into key and value, the line itself is not logged as it might contain a password
+    size_t equalPos = line.find("=", start);
+    if (equalPos == std::string::npos) { bz_debugMessage(1, "Ignoring ircRelay config line without key=value"); return; }
+
+    std::string key = line.substr(start, equalPos - start);
+    key = key.substr(0, key.find_last_not_of(whitespace) + 1);
+    makelower(key);
+
+    std::string value = line.substr(equalPos + 1);
+    size_t valueStart = value.find_first_not_of(whitespace);
+    if (valueStart == std::string::npos) value = ""; else value = value.substr(valueStart, value.find_last_not_of(whitespace) - valueStart + 1);
+
+    if (key == "address" || key == "port" || key == "channel" || key == "nick" || key == "pass" || key == "authtype" || key == "authpass" || key == "ignore" || key == "prefix") {
+        pluginConfig[key] = value;
+    }
+    else {
+        std::string debugMessage = "Ignoring unknown ircRelay config key " + key;
+        bz_debugMessage(1, debugMessage.c_str());
+    }
+}
+
+bool ircRelay::HasSetting(const char* key) {
+    return pluginConfig.find(key) != pluginConfig.end();
+}
+
+std::string ircRelay::GetSetting(const char* key, const char* bzdbName) {
+    // plugin config wins, the BZDB is only a fallback for settings allowed to be changed in-game
+    auto it = pluginConfig.find(key);
+    if (it != pluginConfig.end()) return it->second;
+    if (bzdbName != nullptr && bz_BZDBItemExists(bzdbName)) return bz_getBZDBString(bzdbName);
+    return "";
+}
+
+void ircRelay::Send(std::string data, int debugLevel, const char* logText) {
+    bz_debugMessage(debugLevel, logText != nullptr ? logText : data.c_str());
 
     std::string line = data + "\r\n";
     if (write(fd, line.c_str(), line.size()) == -1) {

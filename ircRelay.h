@@ -5,6 +5,7 @@
 #include "bzfsAPI.h"
 #include "plugin_utils.h"
 
+#include <map>
 #include <regex>
 
 int fd;
@@ -12,6 +13,7 @@ bool fc;
 unsigned int pingCount;
 unsigned int retryCount;
 std::regex rgx("[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}");
+std::map<std::string, std::string> pluginConfig;
 
 class ircRelay : public bz_Plugin {
     public:
@@ -23,8 +25,13 @@ class ircRelay : public bz_Plugin {
         static void Start();
         static void Stop();
 
+        static void ParseConfig(const char* config);
+        static void ParseConfigLine(std::string line);
+        static bool HasSetting(const char* key);
+        static std::string GetSetting(const char* key, const char* bzdbName);
+
         static void Receive(const char* until);
-        static void Send(std::string data, int debugLevel);
+        static void Send(std::string data, int debugLevel, const char* logText = nullptr);
 
         static void Wait(unsigned int seconds, unsigned int milliseconds);
         static void Worker();
