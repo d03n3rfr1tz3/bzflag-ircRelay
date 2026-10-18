@@ -468,8 +468,17 @@ void ircRelay::Receive(const char* until) {
                     }
                 }
 
-                // send the IRC message into the BZFlag chat
-                if (!ignored) {
+                // send the IRC message into the BZFlag chat, unless it is tagged for another game
+                if (ignored) {
+                    std::string debugMessage = "Message from " + username + " got ignored";
+                    bz_debugMessage(3, debugMessage.c_str());
+                }
+                else if (!Filter(message)) {
+                    std::string debugMessage = "Message from " + username + " got filtered";
+                    bz_debugMessage(3, debugMessage.c_str());
+                }
+                else {
+                    ReplaceUmlauts(message);
                     if (message.length() > 8 && message.substr(0, 7) == "\001ACTION") {
                         std::string total = username + " " + message.substr(8, message.size());
                         bz_sendTextMessage(BZ_SERVER, BZ_ALLUSERS, eActionMessage, total.substr(0, total.size() - 1).c_str());
@@ -480,10 +489,6 @@ void ircRelay::Receive(const char* until) {
                         bz_sendTextMessage(BZ_SERVER, BZ_ALLUSERS, total.c_str());
                         bz_debugMessage(4, total.c_str());
                     }
-                }
-                else {
-                    std::string debugMessage = "Message from " + username + " got ignored";
-                    bz_debugMessage(3, debugMessage.c_str());
                 }
             }
 
@@ -502,6 +507,38 @@ void ircRelay::Receive(const char* until) {
 
         if (until == nullptr) {
             found = true;
+        }
+    }
+}
+
+bool ircRelay::Filter(std::string& message) {
+    // messages tagged with a game, e.g. "[BZFlag] text", only go into this game
+    std::smatch messageMatch;
+    if (!std::regex_search(message, messageMatch, tagRgx)) return true;
+
+    std::smatch prefixMatch;
+    std::string ircPrefix = GetSetting("prefix", "_ircPrefix");
+    if (std::regex_search(ircPrefix, prefixMatch, prefixRgx) && prefixMatch[1] == messageMatch[1]) {
+        size_t tagLength = messageMatch.length(0);
+        message.erase(0, tagLength);
+        return true;
+    }
+
+    return false;
+}
+
+void ircRelay::ReplaceUmlauts(std::string& message) {
+    // BZFlag cannot show umlauts, so they are replaced by their ASCII spelling
+    static const std::pair<std::string, std::string> umlauts[] = {
+        { "\xC3\xA4", "ae" }, { "\xC3\xB6", "oe" }, { "\xC3\xBC", "ue" },
+        { "\xC3\x84", "Ae" }, { "\xC3\x96", "Oe" }, { "\xC3\x9C", "Ue" }, { "\xC3\x9F", "ss" }
+    };
+
+    for (const auto& umlaut : umlauts) {
+        size_t pos = 0;
+        while ((pos = message.find(umlaut.first, pos)) != std::string::npos) {
+            message.replace(pos, umlaut.first.length(), umlaut.second);
+            pos += umlaut.second.length();
         }
     }
 }

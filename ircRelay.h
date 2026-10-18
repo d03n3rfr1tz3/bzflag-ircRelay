@@ -13,6 +13,8 @@ bool fc;
 unsigned int pingCount;
 unsigned int retryCount;
 std::regex rgx("[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}");
+std::regex tagRgx("^\\[([^\\]]+)\\] ");
+std::regex prefixRgx("^\\[([^\\]]+)\\]");
 std::map<std::string, std::string> pluginConfig;
 
 class ircRelay : public bz_Plugin {
@@ -32,6 +34,8 @@ class ircRelay : public bz_Plugin {
 
         static void Receive(const char* until);
         static void Send(std::string data, int debugLevel, const char* logText = nullptr);
+        static bool Filter(std::string& message);
+        static void ReplaceUmlauts(std::string& message);
 
         static void Wait(unsigned int seconds, unsigned int milliseconds);
         static void Worker();

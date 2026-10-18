@@ -74,6 +74,14 @@ If a setting is given in the plug-in configuration, its BZDB variable does not e
 | `_ircIgnore` | string |  | Optional. Comma separated list of ignored IRC users. Messages from these users will not be passed into the BZFlag chat. |
 | `_ircPrefix` | string |  | Optional. Prefix for all messages sent into the IRC channel. |
 
+### Messages for a specific game
+
+If you run several game servers with an IRC Relay in the same channel, an IRC message can be sent to only one of them
+by starting it with the tag of that game in brackets, followed by a space, e.g. `[BZFlag] Hello`.
+The tag is taken from the brackets at the start of `prefix`. A message with the own tag is passed into the BZFlag chat
+without the tag, a message with any other tag is not passed at all. Messages without a tag are passed as usual.
+German umlauts are replaced by their ASCII spelling (e.g. `ä` by `ae`), because BZFlag cannot show them.
+
 ### Upgrading from older versions
 
 Older versions used the BZDB variables `_ircAddress`, `_ircPort`, `_ircPass`, `_ircAuthType` and `_ircAuthPass`.
