@@ -159,8 +159,8 @@ void ircRelay::Start() {
 void ircRelay::Stop() {
     bz_debugMessage(2, "Stopping ircRelay custom plugin");
 
-    // close socket
-    close(fd);
+    // close socket, but never fd 0 (stdin) when we got stopped already
+    if (fd != 0) close(fd);
     fd = 0;
 
     bz_debugMessage(2, "Stopped ircRelay custom plugin");
@@ -171,6 +171,27 @@ void ircRelay::Cleanup() {
 
     // clean up stuff
     fc = true;
+
+    // players still on the server at shutdown never get a part event, so announce them here
+    if (fd != 0) {
+        bz_APIIntList* players = bz_newIntList();
+        if (bz_getPlayerIndexList(players)) {
+            for (unsigned int i = 0; i < players->size(); i++) {
+                bz_BasePlayerRecord* player = bz_getPlayerByIndex(players->get(i));
+                if (player == NULL) continue;
+                if (player->team != eNoTeam) SendPart(player);
+                bz_freePlayerRecord(player);
+            }
+        }
+        bz_deleteIntList(players);
+    }
+
+    // say goodbye and give the irc server a moment to process everything before the socket gets closed
+    if (fd != 0) {
+        Send("QUIT :BZFlag server stopped", 3);
+        Wait(1, 0);
+    }
+
     Stop();
     Flush();
 
@@ -360,51 +381,7 @@ void ircRelay::Event(bz_EventData* eventData) {
             // (bz_ApiString)         reason    - The reason for leaving, such as a kick or a ban
             // (double)               eventTime - Time of event.
 
-            std::string ircChannel = GetSetting("channel", "_ircChannel");
-            std::string ircPrefix = GetSetting("prefix", "_ircPrefix");
-            if (ircChannel == "") break;
-
-            bz_BasePlayerRecord* leaver = data->record;
-            if (leaver != NULL) {
-                std::string callsign = leaver->callsign;
-                int team = leaver->team;
-                std::string colorcode;
-
-                if (team == 0)
-                    colorcode = "\00307"; // rogue
-
-                else if (team == 1)
-                    colorcode = "\00304"; // red team
-
-                else if (team == 2)
-                    colorcode = "\00303"; // green team
-
-                else if (team == 3)
-                    colorcode = "\00302"; // blue team
-
-                else if (team == 4)
-                    colorcode = "\00306"; // purple team
-
-                else if (team == 5)
-                    colorcode = "\00314"; // rabbit
-
-                else if (team == 6)
-                    colorcode = "\00305"; // hunter
-
-                else if (team == 7)
-                    colorcode = "\00310"; // observer
-
-                else
-                    colorcode = "\017";
-
-                if (callsign != "") {//send it only it is not a list server ping
-                    std::string subtotal = colorcode + callsign + "\017" + " left the game";
-                    std::string total = "PRIVMSG #" + ircChannel + " :" + ircPrefix + subtotal;
-
-                    Send(total, 3);
-                    break;
-                }
-            }
+            SendPart(data->record);
         }
         break;
 
@@ -420,9 +397,11 @@ void ircRelay::Receive(const char* until) {
     while (!found) {
         char recv_buf[1025];
         int r_len = read(fd, recv_buf, 1024);
-        if (r_len == -1) {
+        if (r_len <= 0) {
+            // -1 is an error, 0 means the irc server closed the connection
             bz_debugMessage(1, "Connection lost to irc server");
             Stop();
+            return;
         }
 
         recv_buf[r_len] = '\0';
@@ -622,11 +601,56 @@ std::string ircRelay::GetSetting(const char* key, const char* bzdbName) {
 
 void ircRelay::Send(std::string data, int debugLevel, const char* logText) {
     bz_debugMessage(debugLevel, logText != nullptr ? logText : data.c_str());
+    if (fd == 0) return;
 
     std::string line = data + "\r\n";
     if (write(fd, line.c_str(), line.size()) == -1) {
         bz_debugMessage(1, "Connection lost to irc server");
         Stop();
+    }
+}
+
+void ircRelay::SendPart(bz_BasePlayerRecord* leaver) {
+    std::string ircChannel = GetSetting("channel", "_ircChannel");
+    std::string ircPrefix = GetSetting("prefix", "_ircPrefix");
+    if (ircChannel == "" || leaver == NULL) return;
+
+    std::string callsign = leaver->callsign;
+    int team = leaver->team;
+    std::string colorcode;
+
+    if (team == 0)
+        colorcode = "\00307"; // rogue
+
+    else if (team == 1)
+        colorcode = "\00304"; // red team
+
+    else if (team == 2)
+        colorcode = "\00303"; // green team
+
+    else if (team == 3)
+        colorcode = "\00302"; // blue team
+
+    else if (team == 4)
+        colorcode = "\00306"; // purple team
+
+    else if (team == 5)
+        colorcode = "\00314"; // rabbit
+
+    else if (team == 6)
+        colorcode = "\00305"; // hunter
+
+    else if (team == 7)
+        colorcode = "\00310"; // observer
+
+    else
+        colorcode = "\017";
+
+    if (callsign != "") {//send it only it is not a list server ping
+        std::string subtotal = colorcode + callsign + "\017" + " left the game";
+        std::string total = "PRIVMSG #" + ircChannel + " :" + ircPrefix + subtotal;
+
+        Send(total, 3);
     }
 }
 
