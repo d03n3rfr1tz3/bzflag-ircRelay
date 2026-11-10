@@ -48,6 +48,7 @@ void ircRelay::Init(const char* config) {
     if (!HasSetting("nick")) bz_registerCustomBZDBString("_ircNick", "", 0, false);
     if (!HasSetting("ignore")) bz_registerCustomBZDBString("_ircIgnore", "", 0, false);
     if (!HasSetting("prefix")) bz_registerCustomBZDBString("_ircPrefix", "", 0, false);
+    if (!HasSetting("hideip")) bz_registerCustomBZDBString("_ircHideIP", "127.0.0.0/8", 0, false);
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
     DWORD thread;
@@ -200,6 +201,7 @@ void ircRelay::Cleanup() {
     if (!HasSetting("nick")) bz_removeCustomBZDBVariable("_ircNick");
     if (!HasSetting("ignore")) bz_removeCustomBZDBVariable("_ircIgnore");
     if (!HasSetting("prefix")) bz_removeCustomBZDBVariable("_ircPrefix");
+    if (!HasSetting("hideip")) bz_removeCustomBZDBVariable("_ircHideIP");
 
     bz_debugMessage(2, "Cleaned ircRelay custom plugin");
 }
@@ -358,6 +360,12 @@ void ircRelay::Event(bz_EventData* eventData) {
                 else {
                     colorcode = "\017";
                 }
+                if (IsHidden(joiner)) {
+                    std::string debugMessage = "Join of " + callsign + " from " + ip + " got hidden";
+                    bz_debugMessage(3, debugMessage.c_str());
+                    break;
+                }
+
                 if (callsign != "") {//send it only it is not a list server ping
                     std::string subtotal = colorcode + callsign + "\017" + " joined as a " + player_team + " from " + ip;
                     std::string total = "PRIVMSG #" + ircChannel + " :" + ircPrefix + subtotal;
@@ -578,7 +586,7 @@ void ircRelay::ParseConfigLine(std::string line) {
     size_t valueStart = value.find_first_not_of(whitespace);
     if (valueStart == std::string::npos) value = ""; else value = value.substr(valueStart, value.find_last_not_of(whitespace) - valueStart + 1);
 
-    if (key == "address" || key == "port" || key == "channel" || key == "nick" || key == "pass" || key == "authtype" || key == "authpass" || key == "ignore" || key == "prefix") {
+    if (key == "address" || key == "port" || key == "channel" || key == "nick" || key == "pass" || key == "authtype" || key == "authpass" || key == "ignore" || key == "prefix" || key == "hideip") {
         pluginConfig[key] = value;
     }
     else {
@@ -619,6 +627,12 @@ void ircRelay::SendPart(bz_BasePlayerRecord* leaver) {
     int team = leaver->team;
     std::string colorcode;
 
+    if (IsHidden(leaver)) {
+        std::string debugMessage = "Part of " + callsign + " from " + std::string(leaver->ipAddress.c_str()) + " got hidden";
+        bz_debugMessage(3, debugMessage.c_str());
+        return;
+    }
+
     if (team == 0)
         colorcode = "\00307"; // rogue
 
@@ -652,6 +666,45 @@ void ircRelay::SendPart(bz_BasePlayerRecord* leaver) {
 
         Send(total, 3);
     }
+}
+
+bool ircRelay::IsHidden(bz_BasePlayerRecord* player) {
+    // players connecting from the given IP ranges (e.g. own bots on the same host) are not announced
+    std::string ircHideIP = GetSetting("hideip", "_ircHideIP");
+    if (player == NULL || ircHideIP == "") return false;
+
+    std::string ipAddress = player->ipAddress.c_str();
+    if (ipAddress.substr(0, 7) == "::ffff:") ipAddress.erase(0, 7);
+
+    unsigned int a, b, c, d;
+    char rest;
+    if (sscanf(ipAddress.c_str(), "%u.%u.%u.%u%c", &a, &b, &c, &d, &rest) != 4 || a > 255 || b > 255 || c > 255 || d > 255) return false;
+    unsigned int ip = (a << 24) | (b << 16) | (c << 8) | d;
+
+    std::string whitespace = " \t\r\n";
+    std::vector<std::string> ranges = tokenize(ircHideIP, ",", 0, false);
+    for (size_t i = 0; i < ranges.size(); i++) {
+        std::string range = ranges[i];
+        size_t start = range.find_first_not_of(whitespace);
+        if (start == std::string::npos) continue;
+        range = range.substr(start, range.find_last_not_of(whitespace) - start + 1);
+
+        // a range is given as a.b.c.d/n, without /n it is a single IP
+        unsigned int bits = 32;
+        int parsed = sscanf(range.c_str(), "%u.%u.%u.%u/%u%c", &a, &b, &c, &d, &bits, &rest);
+        bool valid = (parsed == 4 && range.find("/") == std::string::npos) || parsed == 5;
+        if (!valid || a > 255 || b > 255 || c > 255 || d > 255 || bits > 32) {
+            std::string debugMessage = "Ignoring invalid ircRelay hideip range " + range;
+            bz_debugMessage(1, debugMessage.c_str());
+            continue;
+        }
+
+        unsigned int net = (a << 24) | (b << 16) | (c << 8) | d;
+        unsigned int mask = bits == 0 ? 0 : 0xFFFFFFFFu << (32 - bits);
+        if ((ip & mask) == (net & mask)) return true;
+    }
+
+    return false;
 }
 
 void ircRelay::Wait(unsigned int seconds, unsigned int milliseconds) {

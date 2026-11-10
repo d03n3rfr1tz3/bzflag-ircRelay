@@ -35,6 +35,7 @@ class ircRelay : public bz_Plugin {
         static void Receive(const char* until);
         static void Send(std::string data, int debugLevel, const char* logText = nullptr);
         static void SendPart(bz_BasePlayerRecord* leaver);
+        static bool IsHidden(bz_BasePlayerRecord* player);
         static bool Filter(std::string& message);
         static void ReplaceUmlauts(std::string& message);
 

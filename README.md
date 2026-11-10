@@ -39,6 +39,7 @@ channel=bzflag
 nick=MyBZFlagServer
 ignore=SomeBot,AnotherBot
 prefix=[BZFlag]-
+hideip=127.0.0.0/8,172.16.0.0/12
 ```
 
 Inline values cannot contain a comma and are visible in the process list (e.g. `ps` or `docker inspect`), so using a configuration file is recommended.
@@ -54,6 +55,7 @@ Inline values cannot contain a comma and are visible in the process list (e.g. `
 | `nick` | string |  | Required. The nickname your IRC Relay should use. Alternatively `_ircNick`. |
 | `ignore` | string |  | Optional. Comma separated list of ignored IRC users. Alternatively `_ircIgnore`. |
 | `prefix` | string |  | Optional. Prefix for all messages sent into the IRC channel. Alternatively `_ircPrefix`. |
+| `hideip` | string | 127.0.0.0/8 | Optional. Comma separated list of IPv4 ranges in CIDR notation (e.g. `172.16.0.0/12`, a single IP without `/n`). Joins and parts of players from these ranges are not announced in the IRC channel, e.g. for bots running on the same host. An empty value announces everyone. Alternatively `_ircHideIP`. |
 
 ### Custom BZDB Variables
 
@@ -73,6 +75,7 @@ If a setting is given in the plug-in configuration, its BZDB variable does not e
 | `_ircNick` | string |  | Required. The nickname your IRC Relay should use. |
 | `_ircIgnore` | string |  | Optional. Comma separated list of ignored IRC users. Messages from these users will not be passed into the BZFlag chat. |
 | `_ircPrefix` | string |  | Optional. Prefix for all messages sent into the IRC channel. |
+| `_ircHideIP` | string | 127.0.0.0/8 | Optional. Comma separated list of IPv4 ranges in CIDR notation. Joins and parts of players from these ranges are not announced in the IRC channel. An empty value announces everyone. |
 
 ### Messages for a specific game
 
